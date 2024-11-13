@@ -1,0 +1,17 @@
+{
+  "name": "unstorage-orm-monorepo",
+  "type": "module",
+  "private": true,
+  "module": "index.ts",
+  "scripts": {
+    "dev": "vite packages/playground",
+    "build": "vite build packages/playground",
+    "preview": "vite preview packages/playground",
+    "lint": "eslint . --fix",
+    "test": "vitest --coverage",
+    "test:ui": "vitest --ui"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}
