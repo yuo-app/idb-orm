@@ -13,32 +13,60 @@ class ORM {
     return this;
   }
 
-  select(query: any) {
+  async select(query: any) {
     if (!this.collection) {
       throw new Error('Collection not specified');
     }
-    return this.driver.read(this.collection, query);
+    const keys = await this.driver.getKeys();
+    const results = [];
+    for (const key of keys) {
+      const item = await this.driver.getItem(key);
+      if (Object.keys(query).every(k => item[k] === query[k])) {
+        results.push(item);
+      }
+    }
+    return results;
   }
 
-  insert(data: any) {
+  async insert(data: any) {
     if (!this.collection) {
       throw new Error('Collection not specified');
     }
-    return this.driver.create(this.collection, data);
+    const key = `${this.collection}:${data.id}`;
+    await this.driver.setItem(key, data);
+    return data;
   }
 
-  update(query: any, data: any) {
+  async update(query: any, data: any) {
     if (!this.collection) {
       throw new Error('Collection not specified');
     }
-    return this.driver.update(this.collection, query, data);
+    const keys = await this.driver.getKeys();
+    let updatedCount = 0;
+    for (const key of keys) {
+      const item = await this.driver.getItem(key);
+      if (Object.keys(query).every(k => item[k] === query[k])) {
+        await this.driver.setItem(key, { ...item, ...data });
+        updatedCount++;
+      }
+    }
+    return updatedCount;
   }
 
-  delete(query: any) {
+  async delete(query: any) {
     if (!this.collection) {
       throw new Error('Collection not specified');
     }
-    return this.driver.delete(this.collection, query);
+    const keys = await this.driver.getKeys();
+    let deletedCount = 0;
+    for (const key of keys) {
+      const item = await this.driver.getItem(key);
+      if (Object.keys(query).every(k => item[k] === query[k])) {
+        await this.driver.removeItem(key);
+        deletedCount++;
+      }
+    }
+    return deletedCount;
   }
 
   chain() {

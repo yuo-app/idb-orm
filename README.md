@@ -46,6 +46,34 @@ await orm.from('users').update({ id: 1 }, { name: 'Jane Doe' });
 await orm.from('users').delete({ id: 1 });
 ```
 
+### Using unstorage drivers
+
+The ORM can now accept any unstorage driver without implementing custom ones. Here's an example of using an unstorage driver with the ORM:
+
+```typescript
+import { createStorage } from 'unstorage';
+import { ORM } from 'your-orm-package';
+
+const unstorageDriver = createStorage({
+  driver: 'localstorage'
+});
+
+const orm = new ORM(unstorageDriver);
+
+// Create
+await orm.from('users').insert({ id: 1, name: 'John Doe' });
+
+// Read
+const users = await orm.from('users').select({ id: 1 });
+console.log(users);
+
+// Update
+await orm.from('users').update({ id: 1 }, { name: 'Jane Doe' });
+
+// Delete
+await orm.from('users').delete({ id: 1 });
+```
+
 ### Query Builder
 
 The ORM also includes a query builder for more complex queries:
