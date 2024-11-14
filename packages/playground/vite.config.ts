@@ -20,9 +20,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['node_modules/@testing-library/jest-dom/vitest'],
-    // coverage: {
-    //   provider: 'v8',
-    // },
+    isolate: false,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+    },
   },
   build: {
     target: 'esnext',
@@ -30,7 +32,7 @@ export default defineConfig({
   resolve: {
     conditions: ['development', 'browser'],
     alias: {
-      '@orm': resolve(__dirname, '../unstorage-orm'),
+      '@orm': resolve(__dirname, '../idb-orm'),
     },
   },
 })

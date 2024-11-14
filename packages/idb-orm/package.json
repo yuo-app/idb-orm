@@ -1,5 +1,5 @@
 {
-  "name": "unstorage-orm",
+  "name": "idb-orm",
   "type": "module",
   "module": "index.ts",
   "scripts": {

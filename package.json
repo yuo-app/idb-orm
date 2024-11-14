@@ -9,7 +9,7 @@
     "preview": "vite preview packages/playground",
     "lint": "eslint . --fix",
     "test": "vitest --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --coverage --ui"
   },
   "workspaces": [
     "packages/*"

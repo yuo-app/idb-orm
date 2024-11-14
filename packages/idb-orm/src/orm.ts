@@ -47,7 +47,6 @@ class QueryBuilder<T> {
       request.onsuccess = () => {
         let results = request.result
 
-        // Apply filters
         results = results.filter((item) => {
           return this.filters.every((filter) => {
             switch (filter.operator) {
@@ -61,7 +60,6 @@ class QueryBuilder<T> {
           })
         })
 
-        // Apply field selection
         if (this.selectedFields.length > 0) {
           results = results.map((item) => {
             const selected: any = {}
@@ -117,7 +115,6 @@ export class IdbOrm {
       request.onupgradeneeded = () => {
         const db = request.result
 
-        // Create object stores based on schema
         Object.entries(this.schema).forEach(([tableName, _tableSchema]) => {
           if (!db.objectStoreNames.contains(tableName)) {
             db.createObjectStore(tableName, {

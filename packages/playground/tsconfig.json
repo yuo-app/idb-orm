@@ -8,7 +8,7 @@
     "moduleResolution": "node",
     "paths": {
       "@orm/*": [
-        "../unstorage-orm/*"
+        "../idb-orm/*"
       ]
     },
     "types": [
