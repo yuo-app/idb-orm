@@ -59,6 +59,18 @@ export type Database<T extends DatabaseSchema> = {
   [TableName in keyof T]: InferSchemaType<T[TableName]>
 }
 
+function selectFields<T extends object, K extends keyof T>(
+  obj: T,
+  fields: K[],
+): T extends object ? T : Pick<T, K> {
+  if (fields.length === 0)
+    return obj as any
+  return fields.reduce((acc, field) => {
+    acc[field] = obj[field]
+    return acc
+  }, {} as Pick<T, K>) as any
+}
+
 class QueryExecutor<
   TSchema extends DatabaseSchema,
   TableName extends keyof TSchema,
@@ -91,7 +103,8 @@ class QueryExecutor<
     return new QueryExecutor(this.builder, async () => {
       if (this.insertedData) {
         await this.executor()
-        return [this.insertedData]
+        const result = selectFields(this.insertedData, fields)
+        return [result] as Array<InferSchemaType<TSchema[TableName]>>
       }
       return this.builder.select(...fields)
     })
@@ -201,18 +214,12 @@ class QueryBuilder<
           })
         })
 
-        if (fields.length > 0) {
-          results = results.map((item) => {
-            const selected: any = {}
-            fields.forEach((field) => {
-              selected[field] = item[field]
-            })
-            return selected
-          })
-        }
-
         if (this.limitCount !== undefined)
           results = results.slice(0, this.limitCount)
+
+        results = results.map(item =>
+          selectFields(item, fields),
+        ) as Array<InferSchemaType<TSchema[TableName]>>
 
         resolve(results)
       }
@@ -245,13 +252,16 @@ class QueryBuilder<
       const transaction = this.db.transaction(this.tableName, 'readwrite')
       const store = transaction.objectStore(this.tableName)
 
-      await new Promise((resolve, reject) => {
+      const result = await new Promise<InferSchemaType<TSchema[TableName]>>((resolve, reject) => {
         const request = store.add(newData)
-        request.onsuccess = () => resolve(undefined)
+        request.onsuccess = () => {
+          newData[this.primaryKey] = request.result as any
+          resolve(newData as InferSchemaType<TSchema[TableName]>)
+        }
         request.onerror = () => reject(request.error)
       })
 
-      return newData as InferSchemaType<TSchema[TableName]>
+      return result
     }, newData as InferSchemaType<TSchema[TableName]>)
   }
 

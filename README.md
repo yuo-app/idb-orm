@@ -43,7 +43,23 @@ const allUsers = await db
   .select()
 ```
 
+`select(...fields)` can be used to select specific fields.
+
+```typescript
+const userIdsAndNames = await db
+  .from('users')
+  .select('id', 'name')
+```
+
 ### Insert records
+
+`insert()` will insert a new record and return the inserted data.
+
+>[!TIP]
+> It's recommended to use `upsert()` for performance reasons.
+>
+> - use `insert()` only if you want it to fail when the record already exists
+> - use `update()` only if you want it to fail when the record doesn't exist
 
 ```typescript
 const user = await db

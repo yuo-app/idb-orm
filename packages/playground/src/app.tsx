@@ -37,13 +37,9 @@ const App: Component = () => {
       name: name(),
       email: email(),
       age: Number.parseInt(age()),
-    }).select('id', 'age')
+    })
 
-    console.log(insertedUsers)
-
-    const users = await db.from('users').limit(1).select('id', 'age')
-
-    console.log(users)
+    console.log('Inserted users:', insertedUsers)
 
     loadUsers()
     setName('')
