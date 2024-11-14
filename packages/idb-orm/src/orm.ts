@@ -96,6 +96,16 @@ class QueryExecutor<
       return this.builder.select(...fields)
     })
   }
+
+  single(): QueryExecutor<TSchema, TableName, InferSchemaType<TSchema[TableName]> | null> {
+    return new QueryExecutor(this.builder, async () => {
+      if (this.insertedData) {
+        await this.executor()
+        return this.insertedData
+      }
+      return this.builder.single()
+    })
+  }
 }
 
 class QueryBuilder<

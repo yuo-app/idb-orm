@@ -1,5 +1,9 @@
 # TODO
 
+- limit(-1) returns all records except the last one. how to return the last one?
+
+## OLD
+
 - TODO: fix filter function chain order
 const user = await db
   .from('users')
