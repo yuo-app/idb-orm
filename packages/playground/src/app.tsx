@@ -1,42 +1,39 @@
-import type { DatabaseSchema } from '@orm/index'
 import type { Component } from 'solid-js'
-import { IdbOrm } from '@orm/index'
+import type { Database, DatabaseSchema } from './../../idb-orm'
 import { createSignal, For } from 'solid-js'
-
-interface User {
-  id?: number
-  name: string
-  email: string
-  age: number
-}
+import { createStore, reconcile } from 'solid-js/store'
+import { IdbOrm } from './../../idb-orm'
 
 const schema = {
   users: {
+    id: { type: 'number' },
     name: { type: 'string', required: true },
     email: { type: 'string', required: true },
     age: { type: 'number', required: true },
   },
 } satisfies DatabaseSchema
 
+type DB = Database<typeof schema>
+type User = DB['users']
+
 const App: Component = () => {
-  const [db, setDb] = createSignal<IdbOrm>()
-  const [users, setUsers] = createSignal<User[]>([])
+  let db: IdbOrm<typeof schema> | undefined
+  const [users, setUsers] = createStore<User[]>([])
   const [name, setName] = createSignal('')
   const [email, setEmail] = createSignal('')
   const [age, setAge] = createSignal('')
 
   async function connectDb() {
-    const idb = new IdbOrm('playground', 1, schema)
-    await idb.connect()
-    setDb(idb)
+    db = new IdbOrm('playground', 1, schema)
+    await db.connect()
   }
 
   async function addUser(e: Event) {
     e.preventDefault()
-    if (!db())
+    if (!db)
       return
 
-    await db()!.table<User>('users').insert({
+    await db.table('users').insert({
       name: name(),
       email: email(),
       age: Number.parseInt(age()),
@@ -49,10 +46,10 @@ const App: Component = () => {
   }
 
   async function loadUsers() {
-    if (!db())
+    if (!db)
       return
-    const results = await db()!.table<User>('users').get()
-    setUsers(results)
+    const results = await db.table('users').get()
+    setUsers(reconcile(results))
   }
 
   return (
@@ -102,7 +99,7 @@ const App: Component = () => {
       </button>
 
       <div class="mt-4">
-        <For each={users()}>
+        <For each={users}>
           {user => (
             <div class="border p-2 mb-2">
               {user.name} ({user.email}) {user.age} years old

@@ -3,6 +3,7 @@ export {
 } from './src/orm'
 
 export type {
+  Database,
   DatabaseSchema,
   SchemaField,
   TableSchema,

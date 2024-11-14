@@ -12,33 +12,72 @@ export interface DatabaseSchema {
   [tableName: string]: TableSchema
 }
 
-class QueryBuilder<T> {
+type InferValue<T extends SchemaField> =
+  T extends { type: 'string' } ? string :
+    T extends { type: 'number' } ? number :
+      T extends { type: 'boolean' } ? boolean :
+        T extends { type: 'object' } ? object :
+          T extends { type: 'array' } ? any[] :
+            never
+
+type InferSchemaType<T extends TableSchema> = {
+  id?: number
+} & {
+  [K in keyof T]: InferValue<T[K]>
+}
+
+type RequiredKeys<T extends TableSchema> = {
+  [K in keyof T]: T[K] extends { required: true } ? K : never
+}[keyof T]
+
+type OptionalKeys<T extends TableSchema> = {
+  [K in keyof T]: T[K] extends { required: true } ? never : K
+}[keyof T]
+
+type TableInsert<T extends TableSchema> = {
+  [K in RequiredKeys<T>]: InferValue<T[K]>
+} & {
+  [K in OptionalKeys<T>]?: InferValue<T[K]>
+}
+
+export type Database<T extends DatabaseSchema> = {
+  [TableName in keyof T]: InferSchemaType<T[TableName]>
+}
+
+class QueryBuilder<
+  TSchema extends DatabaseSchema,
+  TableName extends keyof TSchema,
+> {
   private table: string
   private filters: any[] = []
   private selectedFields: string[] = []
   private db: IDBDatabase
 
-  constructor(db: IDBDatabase, table: string) {
+  constructor(db: IDBDatabase, table: TableName) {
     this.db = db
-    this.table = table
+    this.table = table as string
   }
 
-  from(table: string) {
-    this.table = table
+  from(table: TableName) {
+    this.table = table as string
     return this
   }
 
-  select(...fields: string[]) {
-    this.selectedFields = fields
-    return this
+  select<Fields extends (keyof TSchema[TableName])[]>(...fields: Fields) {
+    this.selectedFields = fields as string[]
+    return this as QueryBuilder<TSchema, TableName>
   }
 
-  where(field: keyof T, operator: '=' | '>' | '<' | '>=' | '<=', value: any) {
+  where(
+    field: keyof TSchema[TableName],
+    operator: '=' | '>' | '<' | '>=' | '<=',
+    value: TSchema[TableName][typeof field],
+  ) {
     this.filters.push({ field, operator, value })
     return this
   }
 
-  async get(): Promise<T[]> {
+  async get(): Promise<Array<InferSchemaType<TSchema[TableName]>>> {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(this.table, 'readonly')
       const store = transaction.objectStore(this.table)
@@ -77,25 +116,27 @@ class QueryBuilder<T> {
     })
   }
 
-  async insert(data: Partial<T>): Promise<T> {
+  async insert(data: TableInsert<TSchema[TableName]>): Promise<InferSchemaType<TSchema[TableName]>> {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(this.table, 'readwrite')
       const store = transaction.objectStore(this.table)
       const request = store.add(data)
 
-      request.onsuccess = () => resolve(data as T)
+      request.onsuccess = () => {
+        resolve(data as InferSchemaType<TSchema[TableName]>)
+      }
       request.onerror = () => reject(request.error)
     })
   }
 }
 
-export class IdbOrm {
+export class IdbOrm<TSchema extends DatabaseSchema> {
   private dbName: string
   private version: number
-  private schema: DatabaseSchema
+  private schema: TSchema
   private db?: IDBDatabase
 
-  constructor(dbName: string, version: number, schema: DatabaseSchema) {
+  constructor(dbName: string, version: number, schema: TSchema) {
     this.dbName = dbName
     this.version = version
     this.schema = schema
@@ -127,9 +168,11 @@ export class IdbOrm {
     })
   }
 
-  table<T>(name: string): QueryBuilder<T> {
+  table<TableName extends keyof TSchema>(
+    name: TableName,
+  ): QueryBuilder<TSchema, TableName> {
     if (!this.db)
       throw new Error('Database not connected')
-    return new QueryBuilder<T>(this.db, name)
+    return new QueryBuilder<TSchema, TableName>(this.db, name)
   }
 }
