@@ -1,12 +1,15 @@
 import type { Component } from 'solid-js'
 import type { Database, DatabaseSchema } from './../../idb-orm'
+import { createClient } from '@supabase/supabase-js'
 import { createSignal, For } from 'solid-js'
 import { createStore, reconcile } from 'solid-js/store'
 import { IdbOrm } from './../../idb-orm'
 
+// const supabase = createClient('test', 'test')
+
 const schema = {
   users: {
-    id: { type: 'number' },
+    id: { type: 'number', primaryKey: true, autoIncrement: true },
     name: { type: 'string', required: true },
     email: { type: 'string', required: true },
     age: { type: 'number', required: true },
@@ -33,7 +36,7 @@ const App: Component = () => {
     if (!db)
       return
 
-    await db.table('users').insert({
+    await db.from('users').insert({
       name: name(),
       email: email(),
       age: Number.parseInt(age()),
@@ -48,7 +51,7 @@ const App: Component = () => {
   async function loadUsers() {
     if (!db)
       return
-    const results = await db.table('users').get()
+    const results = await db.from('users').select()
     setUsers(reconcile(results))
   }
 

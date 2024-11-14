@@ -1,14 +1,14 @@
 # idb-orm
 
-A lightweight, type-safe ORM for IndexedDB with a simple query builder interface inspired by drizzle and supabase-js.
+A lightweight, type-safe ORM for IndexedDB that closely matches the supabase-js API.
 
-## install
+## Install
 
 ```bash
 npm i idb-orm
 ```
 
-## quick start
+## Quick Start
 
 ```typescript
 import { IdbOrm } from 'idb-orm'
@@ -16,55 +16,84 @@ import { IdbOrm } from 'idb-orm'
 // Define your database schema
 const schema = {
   users: {
+    id: { type: 'number' },
     name: { type: 'string', required: true },
-    email: { type: 'string', required: true },
     age: { type: 'number', required: true },
   }
 } satisfies DatabaseSchema
 
 // Types are automatically inferred from schema
 type DB = Database<typeof schema>
-type User = DB['users'] // { id?: number, name: string, email: string, age: number }
+type User = DB['users'] // { id?: number, name: string, age: number }
 
 // Initialize and connect
 const db = new IdbOrm('myDatabase', 1, schema)
 await db.connect()
 ```
 
-## query operations
+## API
 
-These can be chained!
-
-### get all records
+### Query Data
 
 ```typescript
-const allUsers = await db.table('users').get()
+const allUsers = await db
+  .from('users')
+  .select()
 ```
 
-### filter records
+### Insert records
 
 ```typescript
-const adults = await db.table('users')
-  .where('age', '>=', 18)
-  .get()
+const user = await db
+  .from('users')
+  .insert({ name: 'Me', age: 30 })
 ```
 
-### select fields
+### Update records
+
+TODO
+
+### Upsert records
 
 ```typescript
-const names = await db.table('users')
-  .select('name', 'email')
-  .get()
+const user = await db
+  .from('users')
+  .upsert({ name: 'Me', age: 30 })
 ```
 
-### insert records
+### Delete records
+
+TODO
+
+### Filter records
 
 ```typescript
-await db.table('users').insert({
-  name: 'John Doe',
-  email: 'john@example.com',
-  age: 30
-})
+const adults = await db
+  .from('users')
+  .gte('age', 18)
+  .select()
+```
+
+### Sort records
+
+TODO
+
+### Limit records
+
+```typescript
+const firstUser = await db
+  .from('users')
+  .limit(3)
+  .select()
+```
+
+### Retrieve one row of data
+
+```typescript
+const user = await db
+  .from('users')
+  .limit(1)
+  .single()
 ```
 
 ### License
