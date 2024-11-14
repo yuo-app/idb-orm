@@ -19,7 +19,6 @@ export interface TableSchema {
   [key: string]: SchemaField
 }
 
-// Helper type to find primary key in schema
 type PrimaryKeyField<T extends TableSchema> = {
   [K in keyof T]: T[K] extends { primaryKey: true } ? K : never
 }[keyof T]
@@ -67,13 +66,16 @@ class QueryExecutor<
 > implements PromiseLike<TResult> {
   private builder: QueryBuilder<TSchema, TableName>
   private executor: () => Promise<TResult>
+  private insertedData?: InferSchemaType<TSchema[TableName]>
 
   constructor(
     builder: QueryBuilder<TSchema, TableName>,
     executor: () => Promise<TResult>,
+    insertedData?: InferSchemaType<TSchema[TableName]>,
   ) {
     this.builder = builder
     this.executor = executor
+    this.insertedData = insertedData
   }
 
   then<TResult1 = TResult, TResult2 = never>(
@@ -86,7 +88,13 @@ class QueryExecutor<
   select<Fields extends (keyof TSchema[TableName])[]>(
     ...fields: Fields
   ): QueryExecutor<TSchema, TableName, Array<InferSchemaType<TSchema[TableName]>>> {
-    return new QueryExecutor(this.builder, () => this.builder.select(...fields))
+    return new QueryExecutor(this.builder, async () => {
+      if (this.insertedData) {
+        await this.executor()
+        return [this.insertedData]
+      }
+      return this.builder.select(...fields)
+    })
   }
 }
 
@@ -217,13 +225,13 @@ class QueryBuilder<
   insert(
     data: TableInsert<TSchema[TableName]>,
   ): QueryExecutor<TSchema, TableName, InferSchemaType<TSchema[TableName]>> {
-    return new QueryExecutor(this, async () => {
-      const newData = { ...data }
-      if (!newData[this.primaryKey] && !this.tableSchema[this.primaryKey].autoIncrement) {
-        const id = this.generateId()
-        newData[this.primaryKey] = id as any
-      }
+    const newData = { ...data }
+    if (!newData[this.primaryKey] && !this.tableSchema[this.primaryKey].autoIncrement) {
+      const id = this.generateId()
+      newData[this.primaryKey] = id as any
+    }
 
+    return new QueryExecutor(this, async () => {
       const transaction = this.db.transaction(this.tableName, 'readwrite')
       const store = transaction.objectStore(this.tableName)
 
@@ -234,7 +242,7 @@ class QueryBuilder<
       })
 
       return newData as InferSchemaType<TSchema[TableName]>
-    })
+    }, newData as InferSchemaType<TSchema[TableName]>)
   }
 
   update(
@@ -255,7 +263,7 @@ class QueryBuilder<
       })
 
       return data as InferSchemaType<TSchema[TableName]>
-    })
+    }, data as InferSchemaType<TSchema[TableName]>)
   }
 
   upsert(
@@ -272,7 +280,7 @@ class QueryBuilder<
       })
 
       return data as InferSchemaType<TSchema[TableName]>
-    })
+    }, data as InferSchemaType<TSchema[TableName]>)
   }
 }
 

@@ -11,12 +11,12 @@ npm i idb-orm
 ## Quick Start
 
 ```typescript
-import { IdbOrm } from 'idb-orm'
+import { type Database, type DatabaseSchema, IdbOrm } from 'idb-orm'
 
 // Define your database schema
 const schema = {
   users: {
-    id: { type: 'number' },
+    id: { type: 'number', primaryKey: true },
     name: { type: 'string', required: true },
     age: { type: 'number', required: true },
   }
@@ -34,6 +34,8 @@ await db.connect()
 ## API
 
 ### Query Data
+
+Use `from()` to select a table, and `select()` to retrieve data.
 
 ```typescript
 const allUsers = await db

@@ -33,11 +33,13 @@ const App: Component = () => {
     if (!db)
       return
 
-    await db.from('users').insert({
+    const users = await db.from('users').insert({
       name: name(),
       email: email(),
       age: Number.parseInt(age()),
-    })
+    }).select()
+
+    console.log(users)
 
     loadUsers()
     setName('')
