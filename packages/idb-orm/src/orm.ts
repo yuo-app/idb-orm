@@ -1,3 +1,12 @@
+// from: https://github.com/supabase/supabase-js/blob/4c7f57197c0109b9393080db5971543347a6397a/src/lib/helpers.ts#L4-L10
+export function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
 export interface SchemaField {
   type: 'string' | 'number' | 'boolean' | 'object' | 'array'
   required?: boolean
@@ -74,7 +83,7 @@ class QueryBuilder<
   private generateId(): string | number {
     const pkField = this.tableSchema[this.primaryKey]
     if (pkField.type === 'string')
-      return crypto.randomUUID()
+      return uuid()
 
     return 0
   }
