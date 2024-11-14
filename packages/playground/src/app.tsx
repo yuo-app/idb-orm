@@ -50,12 +50,6 @@ const App: Component = () => {
       return
     const results = await db.from('users').select()
     setUsers(reconcile(results))
-
-    const user = await db
-      .from('users')
-      .insert({ name: 'John Doe', email: 'asd', age: 30 })
-      // .select()
-    // user.
   }
 
   return (

@@ -60,6 +60,36 @@ export type Database<T extends DatabaseSchema> = {
   [TableName in keyof T]: InferSchemaType<T[TableName]>
 }
 
+class QueryExecutor<
+  TSchema extends DatabaseSchema,
+  TableName extends keyof TSchema,
+  TResult = any,
+> implements PromiseLike<TResult> {
+  private builder: QueryBuilder<TSchema, TableName>
+  private executor: () => Promise<TResult>
+
+  constructor(
+    builder: QueryBuilder<TSchema, TableName>,
+    executor: () => Promise<TResult>,
+  ) {
+    this.builder = builder
+    this.executor = executor
+  }
+
+  then<TResult1 = TResult, TResult2 = never>(
+    onfulfilled?: ((value: TResult) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
+  ): PromiseLike<TResult1 | TResult2> {
+    return this.executor().then(onfulfilled, onrejected)
+  }
+
+  select<Fields extends (keyof TSchema[TableName])[]>(
+    ...fields: Fields
+  ): QueryExecutor<TSchema, TableName, Array<InferSchemaType<TSchema[TableName]>>> {
+    return new QueryExecutor(this.builder, () => this.builder.select(...fields))
+  }
+}
+
 class QueryBuilder<
   TSchema extends DatabaseSchema,
   TableName extends keyof TSchema,
@@ -90,37 +120,37 @@ class QueryBuilder<
 
   eq(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
     this.filters.push({ field, operator: '=', value })
-    return this
+    return new QueryExecutor(this, async () => this)
   }
 
   neq(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
     this.filters.push({ field, operator: '!=', value })
-    return this
+    return new QueryExecutor(this, async () => this)
   }
 
   gt(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
     this.filters.push({ field, operator: '>', value })
-    return this
+    return new QueryExecutor(this, async () => this)
   }
 
   gte(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
     this.filters.push({ field, operator: '>=', value })
-    return this
+    return new QueryExecutor(this, async () => this)
   }
 
   lt(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
     this.filters.push({ field, operator: '<', value })
-    return this
+    return new QueryExecutor(this, async () => this)
   }
 
   lte(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
     this.filters.push({ field, operator: '<=', value })
-    return this
+    return new QueryExecutor(this, async () => this)
   }
 
   limit(count: number) {
     this.limitCount = count
-    return this
+    return new QueryExecutor(this, async () => this)
   }
 
   async single(): Promise<InferSchemaType<TSchema[TableName]> | null> {
@@ -184,52 +214,64 @@ class QueryBuilder<
     })
   }
 
-  async insert(
+  insert(
     data: TableInsert<TSchema[TableName]>,
-  ): Promise<QueryBuilder<TSchema, TableName>> {
-    const newData = { ...data }
-    if (!newData[this.primaryKey] && !this.tableSchema[this.primaryKey].autoIncrement) {
-      const id = this.generateId()
-      newData[this.primaryKey] = id as any
-    }
+  ): QueryExecutor<TSchema, TableName, InferSchemaType<TSchema[TableName]>> {
+    return new QueryExecutor(this, async () => {
+      const newData = { ...data }
+      if (!newData[this.primaryKey] && !this.tableSchema[this.primaryKey].autoIncrement) {
+        const id = this.generateId()
+        newData[this.primaryKey] = id as any
+      }
 
-    const transaction = this.db.transaction(this.tableName, 'readwrite')
-    const store = transaction.objectStore(this.tableName)
+      const transaction = this.db.transaction(this.tableName, 'readwrite')
+      const store = transaction.objectStore(this.tableName)
 
-    return new Promise((resolve, reject) => {
-      const request = store.add(newData)
-      request.onsuccess = () => resolve(this)
-      request.onerror = () => reject(request.error)
+      await new Promise((resolve, reject) => {
+        const request = store.add(newData)
+        request.onsuccess = () => resolve(undefined)
+        request.onerror = () => reject(request.error)
+      })
+
+      return newData as InferSchemaType<TSchema[TableName]>
     })
   }
 
-  async update(
+  update(
     data: Partial<TableInsert<TSchema[TableName]>> & { id: number },
-  ): Promise<QueryBuilder<TSchema, TableName>> {
-    const exists = await this.exists(data.id)
-    if (!exists)
-      throw new Error('Record not found')
+  ): QueryExecutor<TSchema, TableName, InferSchemaType<TSchema[TableName]>> {
+    return new QueryExecutor(this, async () => {
+      const exists = await this.exists(data.id)
+      if (!exists)
+        throw new Error('Record not found')
 
-    const transaction = this.db.transaction(this.tableName, 'readwrite')
-    const store = transaction.objectStore(this.tableName)
+      const transaction = this.db.transaction(this.tableName, 'readwrite')
+      const store = transaction.objectStore(this.tableName)
 
-    return new Promise((resolve, reject) => {
-      const request = store.put(data)
-      request.onsuccess = () => resolve(this)
-      request.onerror = () => reject(request.error)
+      await new Promise((resolve, reject) => {
+        const request = store.put(data)
+        request.onsuccess = () => resolve(undefined)
+        request.onerror = () => reject(request.error)
+      })
+
+      return data as InferSchemaType<TSchema[TableName]>
     })
   }
 
-  async upsert(
+  upsert(
     data: TableInsert<TSchema[TableName]> & { id?: number },
-  ): Promise<QueryBuilder<TSchema, TableName>> {
-    const transaction = this.db.transaction(this.tableName, 'readwrite')
-    const store = transaction.objectStore(this.tableName)
+  ): QueryExecutor<TSchema, TableName, InferSchemaType<TSchema[TableName]>> {
+    return new QueryExecutor(this, async () => {
+      const transaction = this.db.transaction(this.tableName, 'readwrite')
+      const store = transaction.objectStore(this.tableName)
 
-    return new Promise((resolve, reject) => {
-      const request = store.put(data)
-      request.onsuccess = () => resolve(this)
-      request.onerror = () => reject(request.error)
+      await new Promise((resolve, reject) => {
+        const request = store.put(data)
+        request.onsuccess = () => resolve(undefined)
+        request.onerror = () => reject(request.error)
+      })
+
+      return data as InferSchemaType<TSchema[TableName]>
     })
   }
 }
