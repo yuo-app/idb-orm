@@ -126,13 +126,13 @@ abstract class BaseQueryBuilder<
           if (modifyOp) {
             switch (modifyOp.type) {
               case 'insert':
-                results = [await this.handleInsert(store, modifyOp.payload)]
+                results = await this.handleInsert(store, modifyOp.payload)
                 break
               case 'update':
-                results = [await this.handleUpdate(store, modifyOp.payload)]
+                results = await this.handleUpdate(store, modifyOp.payload)
                 break
               case 'upsert':
-                results = [await this.handleUpsert(store, modifyOp.payload)]
+                results = await this.handleUpsert(store, modifyOp.payload)
                 break
               case 'delete':
                 await this.handleDelete(store)
@@ -162,6 +162,11 @@ abstract class BaseQueryBuilder<
             if (limitOp)
               allRecords.splice(limitOp.payload)
 
+            // Apply offset
+            const offsetOp = this.operations.find(op => op.type === 'offset')
+            if (offsetOp)
+              allRecords.splice(0, offsetOp.payload)
+
             // Select specific fields if requested
             if (selectOp?.payload)
               results = allRecords.map(r => selectFields(r, selectOp.payload as string[]))
@@ -176,7 +181,6 @@ abstract class BaseQueryBuilder<
         }
       }
 
-      // Process results before transaction completes
       processResults()
 
       transaction.onerror = () => reject(transaction.error)
@@ -189,29 +193,44 @@ abstract class BaseQueryBuilder<
     })
   }
 
-  private async handleInsert(store: IDBObjectStore, data: any): Promise<any> {
+  private async handleInsert(store: IDBObjectStore, data: any): Promise<any[]> {
     return new Promise((resolve, reject) => {
       const request = store.add(data)
       request.onsuccess = () => {
         data.id = request.result
-        resolve(data)
+        resolve([data])
       }
       request.onerror = () => reject(request.error)
     })
   }
 
-  private async handleUpdate(store: IDBObjectStore, data: any): Promise<any> {
+  private async exists(store: IDBObjectStore, id: any): Promise<boolean> {
     return new Promise((resolve, reject) => {
-      const request = store.put(data)
-      request.onsuccess = () => resolve(data)
+      const request = store.get(id)
+      request.onsuccess = () => resolve(!!request.result)
       request.onerror = () => reject(request.error)
     })
   }
 
-  private async handleUpsert(store: IDBObjectStore, data: any): Promise<any> {
+  private async handleUpdate(store: IDBObjectStore, data: any): Promise<any[]> {
+    if (!data.id)
+      throw new Error('Update requires an id')
+
+    const exists = await this.exists(store, data.id)
+    if (!exists)
+      return []
+
     return new Promise((resolve, reject) => {
       const request = store.put(data)
-      request.onsuccess = () => resolve(data)
+      request.onsuccess = () => resolve([data])
+      request.onerror = () => reject(request.error)
+    })
+  }
+
+  private async handleUpsert(store: IDBObjectStore, data: any): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      const request = store.put(data)
+      request.onsuccess = () => resolve([data])
       request.onerror = () => reject(request.error)
     })
   }
@@ -235,7 +254,6 @@ abstract class BaseQueryBuilder<
       request.onsuccess = () => {
         let results = request.result
 
-        // Apply filters
         const filterOps = this.operations.filter(op => op.type === 'filter')
         if (filterOps.length) {
           results = results.filter(record =>
@@ -376,11 +394,16 @@ class FilterBuilder<
     return this
   }
 
-  order(field: keyof TSchema[TableName], direction: 'asc' | 'desc'): this {
+  order(field: keyof TSchema[TableName], direction: 'asc' | 'desc' = 'asc'): this {
     this.operations.push({
       type: 'order',
       payload: { field: field as string, direction },
     })
+    return this
+  }
+
+  offset(count: number): this {
+    this.operations.push({ type: 'offset', payload: count })
     return this
   }
 

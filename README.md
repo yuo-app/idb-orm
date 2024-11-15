@@ -33,6 +33,11 @@ await db.connect()
 
 ## API
 
+>[!NOTE]
+> idb-orm differs from supabase-js in one key way:
+> **you need to terminate chains with `get()` to execute them.**
+> and `get()` will always return the modified data like when supabase's `select()` is called on insert methods.
+
 ### Query Data
 
 Use `from()` to select a table, and `select()` to retrieve data.
@@ -41,6 +46,7 @@ Use `from()` to select a table, and `select()` to retrieve data.
 const allUsers = await db
   .from('users')
   .select()
+  .get()
 ```
 
 `select(...fields)` can be used to select specific fields.
@@ -49,6 +55,7 @@ const allUsers = await db
 const userIdsAndNames = await db
   .from('users')
   .select('id', 'name')
+  .get()
 ```
 
 ### Insert records
@@ -76,6 +83,7 @@ const user = await db
   .from('users')
   .eq('name', 'Me')
   .update({ age: 31 })
+  .get()
 ```
 
 ### Upsert records
@@ -86,6 +94,7 @@ const user = await db
 const user = await db
   .from('users')
   .upsert({ name: 'Me', age: 31 })
+  .get()
 ```
 
 ### Delete records
@@ -97,6 +106,7 @@ await db
   .from('users')
   .eq('name', 'Me')
   .delete()
+  .get()
 ```
 
 ### Filter records
@@ -108,28 +118,38 @@ const adults = await db
   .from('users')
   .gte('age', 18)
   .select()
+  .get()
 ```
 
 ### Sort records
 
-Sort records using `order()`.
+Sort records using `order(field, direction)`. Use `asc` or `desc` for the direction.
 
-TODO
+```typescript
+const sortedUsers = await db
+  .from('users')
+  .select()
+  .order('age', 'asc')
+  .get()
+```
 
-### Limit records
+### Limit/offset records
 
 Use `limit()` to return the first N records. Combine this with `sort()` to get the last N records.
 
 ```typescript
 const firstUser = await db
   .from('users')
-  .limit(3)
   .select()
+  .limit(3)
+  .get()
 ```
+
+`offset()` can be used to skip the first N records.
 
 ### Retrieve one row of data
 
-`single()` will return just one row of data, and not an array.
+`single()` can be used instead of `get()` to return just one row of data, and not an array.
 
 ```typescript
 const user = await db
