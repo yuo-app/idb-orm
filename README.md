@@ -31,6 +31,26 @@ const db = new IdbOrm('myDatabase', 1, schema)
 await db.connect()
 ```
 
+## Schema
+
+### Ids
+
+Use `primaryKey: true` to define a primary key.
+
+- `type: 'number'` can be used to auto-increment the primary key combined with `autoIncrement: true`.
+- `type: 'string'` generates a UUID
+
+### Types
+
+- `type: 'string'`
+- `type: 'number'`
+- `type: 'boolean'`
+- `type: 'object'`
+- `type: 'array'`
+
+Use `required: true` to enforce a field to be non-nullable.
+Use `defaultValue: any` to set a default value.
+
 ## API
 
 >[!NOTE]
