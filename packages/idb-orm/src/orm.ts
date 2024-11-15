@@ -370,6 +370,13 @@ export class IdbOrm<TSchema extends DatabaseSchema> {
     })
   }
 
+  disconnect(): void {
+    if (this.db) {
+      this.db.close()
+      this.db = undefined
+    }
+  }
+
   from<TableName extends keyof TSchema>(
     name: TableName,
   ): QueryBuilder<TSchema, TableName> {
