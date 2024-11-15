@@ -56,8 +56,8 @@ Use `defaultValue: any` to set a default value.
 >[!NOTE]
 > idb-orm differs from supabase-js in one key way:
 >
-> **you need to terminate chains with `get()` to execute them.**
-> and `get()` will always return the modified data like when supabase's `select()` is called on insert methods.
+> - **you need to terminate chains with `get()` to execute them.**
+> - `get()` will always return the modified data like when supabase's `select()` is called on insert methods.
 
 ### Query Data
 
@@ -87,7 +87,7 @@ const userIdsAndNames = await db
 > It's recommended to use `upsert()` which directly inserts or updates a record.
 >
 > - use `insert()` only if you want it to fail when the record already exists
-> - use `update()` only if you want it to fail when the record doesn't exist
+> - `update()` will not fail if the record does not exist, it will return an empty array
 
 ```typescript
 const user = await db
