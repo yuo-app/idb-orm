@@ -384,12 +384,12 @@ class FilterBuilder<
     return this
   }
 
-  async run(): Promise<InferSchemaType<TSchema[TableName]>[]> {
+  async get(): Promise<InferSchemaType<TSchema[TableName]>[]> {
     return this.executeQuery()
   }
 
   async single(): Promise<InferSchemaType<TSchema[TableName]> | null> {
-    const results = await this.run()
+    const results = await this.get()
     return results[0] || null
   }
 }

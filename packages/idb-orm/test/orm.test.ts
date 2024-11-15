@@ -32,7 +32,7 @@ describe('idbOrm', () => {
         name: 'Test User',
         age: 25,
       })
-      .run()
+      .get()
 
     expect(user[0].id).toBeDefined()
     expect(user[0].name).toBe('Test User')
@@ -46,12 +46,12 @@ describe('idbOrm', () => {
         admin: true,
         age: 25,
       })
-      .run()
+      .get()
 
     const users = await db
       .from('users')
       .select()
-      .run()
+      .get()
 
     expect(users).toHaveLength(1)
     expect(users[0].name).toBe('Test User')
@@ -61,13 +61,13 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'User 1',
       age: 20,
-    }).run()
+    }).get()
     await db.from('users').insert({
       name: 'User 2',
       age: 30,
-    }).run()
+    }).get()
 
-    const users = await db.from('users').select().eq('age', 20).run()
+    const users = await db.from('users').select().eq('age', 20).get()
     expect(users).toHaveLength(1)
     expect(users[0].name).toBe('User 1')
   })
@@ -76,12 +76,12 @@ describe('idbOrm', () => {
     const user = await db.from('users').insert({
       name: 'Old Name',
       age: 25,
-    }).run()
+    }).get()
 
     const updated = await db.from('users').update({
       id: user[0].id,
       name: 'New Name',
-    }).run()
+    }).get()
 
     expect(updated[0].name).toBe('New Name')
   })
@@ -90,13 +90,13 @@ describe('idbOrm', () => {
     const user = await db.from('users').upsert({
       name: 'Test User',
       age: 25,
-    }).run()
+    }).get()
 
     const upserted = await db.from('users').upsert({
       id: user[0].id,
       name: 'Updated User',
       age: 25,
-    }).run()
+    }).get()
 
     expect(upserted[0].name).toBe('Updated User')
   })
@@ -105,9 +105,9 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'Test User',
       age: 25,
-    }).run()
+    }).get()
 
-    const users = await db.from('users').select('name', 'age').run()
+    const users = await db.from('users').select('name', 'age').get()
     expect(users[0]).toEqual({
       name: 'Test User',
       age: 25,
@@ -118,13 +118,13 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'User 1',
       age: 20,
-    }).run()
+    }).get()
     await db.from('users').insert({
       name: 'User 2',
       age: 30,
-    }).run()
+    }).get()
 
-    const users = await db.from('users').select().limit(1).run()
+    const users = await db.from('users').select().limit(1).get()
     expect(users).toHaveLength(1)
     expectTypeOf(users).toEqualTypeOf<User[]>()
   })
@@ -133,7 +133,7 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'Test User',
       age: 25,
-    }).run()
+    }).get()
 
     const user = await db.from('users').select().single()
     expect(user).toBeDefined()
@@ -145,17 +145,17 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'Young User',
       age: 20,
-    }).run()
+    }).get()
     await db.from('users').insert({
       name: 'Old User',
       age: 30,
-    }).run()
+    }).get()
 
-    const young = await db.from('users').select().lt('age', 25).run()
+    const young = await db.from('users').select().lt('age', 25).get()
     expect(young).toHaveLength(1)
     expect(young[0].name).toBe('Young User')
 
-    const old = await db.from('users').select().gte('age', 30).run()
+    const old = await db.from('users').select().gte('age', 30).get()
     expect(old).toHaveLength(1)
     expect(old[0].name).toBe('Old User')
   })
@@ -164,15 +164,15 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'User 1',
       age: 20,
-    }).run()
+    }).get()
     await db.from('users').insert({
       name: 'User 2',
       age: 30,
-    }).run()
+    }).get()
 
-    await db.from('users').delete().eq('name', 'User 1').run()
+    await db.from('users').delete().eq('name', 'User 1').get()
 
-    const remaining = await db.from('users').select().run()
+    const remaining = await db.from('users').select().get()
     expect(remaining).toHaveLength(1)
     expect(remaining[0].name).toBe('User 2')
   })
@@ -181,15 +181,15 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'User 1',
       age: 20,
-    }).run()
+    }).get()
     await db.from('users').insert({
       name: 'User 2',
       age: 30,
-    }).run()
+    }).get()
 
-    await db.from('users').delete().run()
+    await db.from('users').delete().get()
 
-    const remaining = await db.from('users').select().run()
+    const remaining = await db.from('users').select().get()
     expect(remaining).toHaveLength(0)
   })
 })

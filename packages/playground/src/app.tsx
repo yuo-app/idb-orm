@@ -40,7 +40,7 @@ const App: Component = () => {
         email: email(),
         age: Number.parseInt(age()),
       })
-      .run()
+      .get()
 
     loadUsers()
     setName('')
@@ -55,7 +55,7 @@ const App: Component = () => {
     const results = await db
       .from('users')
       .select()
-      .run()
+      .get()
 
     setUsers(reconcile(results))
   }
