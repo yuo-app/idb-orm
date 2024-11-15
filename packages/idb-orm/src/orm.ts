@@ -144,7 +144,7 @@ abstract class BaseQueryBuilder<
           // If no modifications or select requested, get filtered results
           const selectOp = this.operations.find(op => op.type === 'select')
           if (!modifyOp || selectOp) {
-            const allRecords = await this.getFilteredRecords(store)
+            let allRecords = await this.getFilteredRecords(store)
 
             // Apply sorting
             const orderOp = this.operations.find(op => op.type === 'order')
@@ -157,15 +157,14 @@ abstract class BaseQueryBuilder<
               })
             }
 
-            // Apply limit
-            const limitOp = this.operations.find(op => op.type === 'limit')
-            if (limitOp)
-              allRecords.splice(limitOp.payload)
-
-            // Apply offset
+            // Apply offset and limit
             const offsetOp = this.operations.find(op => op.type === 'offset')
+            const limitOp = this.operations.find(op => op.type === 'limit')
+
             if (offsetOp)
-              allRecords.splice(0, offsetOp.payload)
+              allRecords = allRecords.slice(offsetOp.payload)
+            if (limitOp)
+              allRecords = allRecords.slice(0, limitOp.payload)
 
             // Select specific fields if requested
             if (selectOp?.payload)
@@ -193,11 +192,29 @@ abstract class BaseQueryBuilder<
     })
   }
 
+  private ensurePrimaryKey(data: any): void {
+    const pkField = Object.entries(this.tableSchema).find(
+      ([_, field]) => field.primaryKey,
+    )
+
+    if (pkField) {
+      const [keyName, field] = pkField
+      // If primary key is string type and not provided, generate UUID
+      if (field.type === 'string' && !data[keyName])
+        data[keyName] = uuid()
+    }
+  }
+
   private async handleInsert(store: IDBObjectStore, data: any): Promise<any[]> {
+    this.ensurePrimaryKey(data)
+
     return new Promise((resolve, reject) => {
       const request = store.add(data)
       request.onsuccess = () => {
-        data.id = request.result
+        // For auto-increment fields, update the id
+        if (request.result !== data.id)
+          data.id = request.result
+
         resolve([data])
       }
       request.onerror = () => reject(request.error)
@@ -213,21 +230,43 @@ abstract class BaseQueryBuilder<
   }
 
   private async handleUpdate(store: IDBObjectStore, data: any): Promise<any[]> {
-    if (!data.id)
-      throw new Error('Update requires an id')
+    const records = await this.getFilteredRecords(store)
 
+    if (records.length === 0)
+      return []
+
+    // If no id in data, apply updates to all filtered records
+    if (!data.id) {
+      return Promise.all(
+        records.map((record) => {
+          const updatedRecord = { ...record, ...data }
+          return new Promise((resolve, reject) => {
+            const request = store.put(updatedRecord)
+            request.onsuccess = () => resolve(updatedRecord)
+            request.onerror = () => reject(request.error)
+          })
+        }),
+      )
+    }
+
+    // If id provided, verify it exists and update
     const exists = await this.exists(store, data.id)
     if (!exists)
       return []
 
     return new Promise((resolve, reject) => {
-      const request = store.put(data)
-      request.onsuccess = () => resolve([data])
+      // Merge with existing record to preserve unspecified fields
+      const existingRecord = records.find(r => r.id === data.id)
+      const updatedRecord = { ...existingRecord, ...data }
+      const request = store.put(updatedRecord)
+      request.onsuccess = () => resolve([updatedRecord])
       request.onerror = () => reject(request.error)
     })
   }
 
   private async handleUpsert(store: IDBObjectStore, data: any): Promise<any[]> {
+    this.ensurePrimaryKey(data)
+
     return new Promise((resolve, reject) => {
       const request = store.put(data)
       request.onsuccess = () => resolve([data])
