@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest --coverage",
     "test:ui": "vitest --coverage --ui",
-    "release": "bumpp && bun run build && bun publish"
+    "release": "bumpp && bun run build && bun publish --access public"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
