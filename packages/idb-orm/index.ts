@@ -5,6 +5,4 @@ export {
 export type {
   Database,
   DatabaseSchema,
-  SchemaField,
-  TableSchema,
-} from './src/orm'
+} from './src/types'

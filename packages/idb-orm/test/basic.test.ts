@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from 'vitest'
-import { type Database, type DatabaseSchema, IdbOrm, uuid } from '../src/orm'
+import { type Database, type DatabaseSchema, IdbOrm, uuid } from '../src'
 
 export const basicSchema = {
   users: {

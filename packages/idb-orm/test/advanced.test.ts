@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { type Database, type DatabaseSchema, IdbOrm } from '../src/orm'
+import { type Database, type DatabaseSchema, IdbOrm } from '../src'
 
 const advancedSchema = {
   products: {
