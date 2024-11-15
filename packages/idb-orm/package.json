@@ -22,6 +22,7 @@
   ],
   "module": "index.ts",
   "files": [
+    "README.md",
     "dist",
     "index.ts",
     "src.ts"
