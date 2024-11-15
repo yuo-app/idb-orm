@@ -90,7 +90,14 @@ const user = await db
 
 ### Delete records
 
-TODO
+`delete()` will remove records that match the query.
+
+```typescript
+await db
+  .from('users')
+  .eq('name', 'Me')
+  .delete()
+```
 
 ### Filter records
 

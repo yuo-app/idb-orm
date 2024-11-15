@@ -149,4 +149,38 @@ describe('idbOrm', () => {
     expect(old).toHaveLength(1)
     expect(old[0].name).toBe('Old User')
   })
+
+  it('deletes records', async () => {
+    await db.from('users').insert({
+      name: 'User 1',
+      age: 20,
+    })
+    await db.from('users').insert({
+      name: 'User 2',
+      age: 30,
+    })
+
+    await (await db.from('users').eq('name', 'User 1')).delete()
+
+    const remaining = await db.from('users').select()
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0].name).toBe('User 2')
+  })
+
+  it('deletes all records when no filter', async () => {
+    await db.from('users').insert({
+      name: 'User 1',
+      age: 20,
+    })
+    await db.from('users').insert({
+
+      name: 'User 2',
+      age: 30,
+    })
+
+    await db.from('users').delete()
+
+    const remaining = await db.from('users').select()
+    expect(remaining).toHaveLength(0)
+  })
 })

@@ -322,6 +322,22 @@ class QueryBuilder<
       return data as InferSchemaType<TSchema[TableName]>
     }, data as InferSchemaType<TSchema[TableName]>)
   }
+
+  delete(): QueryExecutor<TSchema, TableName, void> {
+    return new QueryExecutor(this, async () => {
+      const recordsToDelete = await this.select()
+      const transaction = this.db.transaction(this.tableName, 'readwrite')
+      const store = transaction.objectStore(this.tableName)
+
+      await Promise.all(recordsToDelete.map((record) => {
+        return new Promise<void>((resolve, reject) => {
+          const request = store.delete(record[this.primaryKey] as IDBValidKey)
+          request.onsuccess = () => resolve()
+          request.onerror = () => reject(request.error)
+        })
+      }))
+    })
+  }
 }
 
 export class IdbOrm<TSchema extends DatabaseSchema> {
