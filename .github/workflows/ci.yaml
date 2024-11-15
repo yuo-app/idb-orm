@@ -38,9 +38,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+
       - name: Install
-        run: bun i
+        run: npm i
 
       - name: Test
-        run: bun run test
+        run: npm run test
