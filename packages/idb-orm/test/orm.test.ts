@@ -26,23 +26,33 @@ describe('idbOrm', () => {
   })
 
   it('inserts a record', async () => {
-    const user = await db.from('users').insert({
-      name: 'Test User',
-      age: 25,
-    })
+    const user = await db
+      .from('users')
+      .insert({
+        name: 'Test User',
+        age: 25,
+      })
+      .run()
 
-    expect(user.id).toBeDefined()
-    expect(user.name).toBe('Test User')
+    expect(user[0].id).toBeDefined()
+    expect(user[0].name).toBe('Test User')
   })
 
   it('selects records', async () => {
-    await db.from('users').insert({
-      name: 'Test User',
-      admin: true,
-      age: 25,
-    })
+    await db
+      .from('users')
+      .insert({
+        name: 'Test User',
+        admin: true,
+        age: 25,
+      })
+      .run()
 
-    const users = await db.from('users').select()
+    const users = await db
+      .from('users')
+      .select()
+      .run()
+
     expect(users).toHaveLength(1)
     expect(users[0].name).toBe('Test User')
   })
@@ -51,13 +61,13 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'User 1',
       age: 20,
-    })
+    }).run()
     await db.from('users').insert({
       name: 'User 2',
       age: 30,
-    })
+    }).run()
 
-    const users = await db.from('users').eq('age', 20).select()
+    const users = await db.from('users').select().eq('age', 20).run()
     expect(users).toHaveLength(1)
     expect(users[0].name).toBe('User 1')
   })
@@ -66,38 +76,38 @@ describe('idbOrm', () => {
     const user = await db.from('users').insert({
       name: 'Old Name',
       age: 25,
-    })
+    }).run()
 
     const updated = await db.from('users').update({
-      id: user.id,
+      id: user[0].id,
       name: 'New Name',
-    })
+    }).run()
 
-    expect(updated.name).toBe('New Name')
+    expect(updated[0].name).toBe('New Name')
   })
 
   it('upserts a record', async () => {
     const user = await db.from('users').upsert({
       name: 'Test User',
       age: 25,
-    })
+    }).run()
 
     const upserted = await db.from('users').upsert({
-      id: user.id,
+      id: user[0].id,
       name: 'Updated User',
       age: 25,
-    })
+    }).run()
 
-    expect(upserted.name).toBe('Updated User')
+    expect(upserted[0].name).toBe('Updated User')
   })
 
   it('selects specific fields', async () => {
     await db.from('users').insert({
       name: 'Test User',
       age: 25,
-    })
+    }).run()
 
-    const users = await db.from('users').select('name', 'age')
+    const users = await db.from('users').select('name', 'age').run()
     expect(users[0]).toEqual({
       name: 'Test User',
       age: 25,
@@ -108,13 +118,13 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'User 1',
       age: 20,
-    })
+    }).run()
     await db.from('users').insert({
       name: 'User 2',
       age: 30,
-    })
+    }).run()
 
-    const users = await db.from('users').limit(1).select()
+    const users = await db.from('users').select().limit(1).run()
     expect(users).toHaveLength(1)
     expectTypeOf(users).toEqualTypeOf<User[]>()
   })
@@ -123,9 +133,9 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'Test User',
       age: 25,
-    })
+    }).run()
 
-    const user = await db.from('users').single()
+    const user = await db.from('users').select().single()
     expect(user).toBeDefined()
     expect(user?.name).toBe('Test User')
     expectTypeOf(user).toEqualTypeOf<User | null>()
@@ -135,17 +145,17 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'Young User',
       age: 20,
-    })
+    }).run()
     await db.from('users').insert({
       name: 'Old User',
       age: 30,
-    })
+    }).run()
 
-    const young = await db.from('users').lt('age', 25).select()
+    const young = await db.from('users').select().lt('age', 25).run()
     expect(young).toHaveLength(1)
     expect(young[0].name).toBe('Young User')
 
-    const old = await db.from('users').gte('age', 30).select()
+    const old = await db.from('users').select().gte('age', 30).run()
     expect(old).toHaveLength(1)
     expect(old[0].name).toBe('Old User')
   })
@@ -154,15 +164,15 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'User 1',
       age: 20,
-    })
+    }).run()
     await db.from('users').insert({
       name: 'User 2',
       age: 30,
-    })
+    }).run()
 
-    await (await db.from('users').eq('name', 'User 1')).delete()
+    await db.from('users').delete().eq('name', 'User 1').run()
 
-    const remaining = await db.from('users').select()
+    const remaining = await db.from('users').select().run()
     expect(remaining).toHaveLength(1)
     expect(remaining[0].name).toBe('User 2')
   })
@@ -171,16 +181,15 @@ describe('idbOrm', () => {
     await db.from('users').insert({
       name: 'User 1',
       age: 20,
-    })
+    }).run()
     await db.from('users').insert({
-
       name: 'User 2',
       age: 30,
-    })
+    }).run()
 
-    await db.from('users').delete()
+    await db.from('users').delete().run()
 
-    const remaining = await db.from('users').select()
+    const remaining = await db.from('users').select().run()
     expect(remaining).toHaveLength(0)
   })
 })

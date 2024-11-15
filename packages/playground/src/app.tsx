@@ -33,11 +33,14 @@ const App: Component = () => {
     if (!db)
       return
 
-    await db.from('users').insert({
-      name: name(),
-      email: email(),
-      age: Number.parseInt(age()),
-    })
+    await db
+      .from('users')
+      .insert({
+        name: name(),
+        email: email(),
+        age: Number.parseInt(age()),
+      })
+      .run()
 
     loadUsers()
     setName('')
@@ -48,7 +51,12 @@ const App: Component = () => {
   async function loadUsers() {
     if (!db)
       return
-    const results = await db.from('users').select()
+
+    const results = await db
+      .from('users')
+      .select()
+      .run()
+
     setUsers(reconcile(results))
   }
 

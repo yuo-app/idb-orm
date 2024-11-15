@@ -73,52 +73,190 @@ function selectFields<T extends object, K extends keyof T>(
   }, {} as Pick<T, K>) as any
 }
 
-class QueryExecutor<
+type Operation =
+  | { type: 'select', payload: string[] | undefined }
+  | { type: 'insert', payload: any }
+  | { type: 'update', payload: any }
+  | { type: 'upsert', payload: any }
+  | { type: 'delete', payload: null }
+  | { type: 'filter', payload: FilterCondition }
+  | { type: 'order', payload: { field: string, direction: 'asc' | 'desc' } }
+  | { type: 'limit', payload: number }
+  | { type: 'offset', payload: number }
+
+interface FilterCondition {
+  field: string
+  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'
+  value: any
+}
+
+abstract class BaseQueryBuilder<
   TSchema extends DatabaseSchema,
   TableName extends keyof TSchema,
   TResult = any,
-> implements PromiseLike<TResult> {
-  private builder: QueryBuilder<TSchema, TableName>
-  private executor: () => Promise<TResult>
-  private insertedData?: InferSchemaType<TSchema[TableName]>
+> {
+  protected operations: Operation[] = []
+  protected db: IDBDatabase
+  protected tableName: string
+  protected schema: TSchema
+  protected tableSchema: TSchema[TableName]
 
-  constructor(
-    builder: QueryBuilder<TSchema, TableName>,
-    executor: () => Promise<TResult>,
-    insertedData?: InferSchemaType<TSchema[TableName]>,
-  ) {
-    this.builder = builder
-    this.executor = executor
-    this.insertedData = insertedData
+  constructor(db: IDBDatabase, table: TableName, schema: TSchema) {
+    this.db = db
+    this.tableName = table as string
+    this.schema = schema
+    this.tableSchema = schema[table]
   }
 
-  then<TResult1 = TResult, TResult2 = never>(
-    onfulfilled?: ((value: TResult) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
-  ): PromiseLike<TResult1 | TResult2> {
-    return this.executor().then(onfulfilled, onrejected)
-  }
+  protected async executeQuery(): Promise<TResult> {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(this.tableName, 'readwrite')
+      const store = transaction.objectStore(this.tableName)
 
-  select<Fields extends (keyof TSchema[TableName])[]>(
-    ...fields: Fields
-  ): QueryExecutor<TSchema, TableName, Array<InferSchemaType<TSchema[TableName]>>> {
-    return new QueryExecutor(this.builder, async () => {
-      if (this.insertedData) {
-        await this.executor()
-        const result = selectFields(this.insertedData, fields)
-        return [result] as Array<InferSchemaType<TSchema[TableName]>>
+      let results: any[] = []
+      let completed = false
+
+      const processResults = async () => {
+        try {
+          const modifyOp = this.operations.find(op =>
+            ['insert', 'update', 'upsert', 'delete'].includes(op.type),
+          )
+
+          // Handle data modifications first
+          if (modifyOp) {
+            switch (modifyOp.type) {
+              case 'insert':
+                results = [await this.handleInsert(store, modifyOp.payload)]
+                break
+              case 'update':
+                results = [await this.handleUpdate(store, modifyOp.payload)]
+                break
+              case 'upsert':
+                results = [await this.handleUpsert(store, modifyOp.payload)]
+                break
+              case 'delete':
+                await this.handleDelete(store)
+                results = []
+                break
+            }
+          }
+
+          // If no modifications or select requested, get filtered results
+          const selectOp = this.operations.find(op => op.type === 'select')
+          if (!modifyOp || selectOp) {
+            const allRecords = await this.getFilteredRecords(store)
+
+            // Apply sorting
+            const orderOp = this.operations.find(op => op.type === 'order')
+            if (orderOp) {
+              allRecords.sort((a, b) => {
+                const { field, direction } = orderOp.payload
+                return direction === 'asc'
+                  ? a[field] > b[field] ? 1 : -1
+                  : a[field] < b[field] ? 1 : -1
+              })
+            }
+
+            // Apply limit
+            const limitOp = this.operations.find(op => op.type === 'limit')
+            if (limitOp)
+              allRecords.splice(limitOp.payload)
+
+            // Select specific fields if requested
+            if (selectOp?.payload)
+              results = allRecords.map(r => selectFields(r, selectOp.payload as string[]))
+            else
+              results = allRecords
+          }
+
+          completed = true
+        }
+        catch (error) {
+          reject(error)
+        }
       }
-      return this.builder.select(...fields)
+
+      // Process results before transaction completes
+      processResults()
+
+      transaction.onerror = () => reject(transaction.error)
+      transaction.oncomplete = () => {
+        if (completed)
+          resolve(results as TResult)
+        else
+          reject(new Error('Transaction completed before processing finished'))
+      }
     })
   }
 
-  single(): QueryExecutor<TSchema, TableName, InferSchemaType<TSchema[TableName]> | null> {
-    return new QueryExecutor(this.builder, async () => {
-      if (this.insertedData) {
-        await this.executor()
-        return this.insertedData
+  private async handleInsert(store: IDBObjectStore, data: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const request = store.add(data)
+      request.onsuccess = () => {
+        data.id = request.result
+        resolve(data)
       }
-      return this.builder.single()
+      request.onerror = () => reject(request.error)
+    })
+  }
+
+  private async handleUpdate(store: IDBObjectStore, data: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const request = store.put(data)
+      request.onsuccess = () => resolve(data)
+      request.onerror = () => reject(request.error)
+    })
+  }
+
+  private async handleUpsert(store: IDBObjectStore, data: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const request = store.put(data)
+      request.onsuccess = () => resolve(data)
+      request.onerror = () => reject(request.error)
+    })
+  }
+
+  private async handleDelete(store: IDBObjectStore): Promise<void> {
+    const records = await this.getFilteredRecords(store)
+    return Promise.all(
+      records.map(record =>
+        new Promise<void>((resolve, reject) => {
+          const request = store.delete(record.id)
+          request.onsuccess = () => resolve()
+          request.onerror = () => reject(request.error)
+        }),
+      ),
+    ).then(() => undefined)
+  }
+
+  private async getFilteredRecords(store: IDBObjectStore): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      const request = store.getAll()
+      request.onsuccess = () => {
+        let results = request.result
+
+        // Apply filters
+        const filterOps = this.operations.filter(op => op.type === 'filter')
+        if (filterOps.length) {
+          results = results.filter(record =>
+            filterOps.every((op) => {
+              const { field, operator, value } = op.payload
+              switch (operator) {
+                case 'eq': return record[field] === value
+                case 'neq': return record[field] !== value
+                case 'gt': return record[field] > value
+                case 'gte': return record[field] >= value
+                case 'lt': return record[field] < value
+                case 'lte': return record[field] <= value
+                default: return true
+              }
+            }),
+          )
+        }
+
+        resolve(results)
+      }
+      request.onerror = () => reject(request.error)
     })
   }
 }
@@ -126,217 +264,133 @@ class QueryExecutor<
 class QueryBuilder<
   TSchema extends DatabaseSchema,
   TableName extends keyof TSchema,
-> {
-  private tableName: string
-  private filters: any[] = []
-  private db: IDBDatabase
-  private limitCount?: number
-  private tableSchema: TSchema[TableName]
-  private primaryKey: PrimaryKeyField<TSchema[TableName]>
-
-  constructor(db: IDBDatabase, table: TableName, schema: TSchema) {
-    this.db = db
-    this.tableName = table as string
-    this.tableSchema = schema[table]
-    this.primaryKey = Object.entries(this.tableSchema).find(
-      ([_, field]) => field.primaryKey,
-    )?.[0] as PrimaryKeyField<TSchema[TableName]>
+> extends BaseQueryBuilder<TSchema, TableName> {
+  select(...fields: (keyof TSchema[TableName])[]): FilterBuilder<TSchema, TableName> {
+    this.operations.push({ type: 'select', payload: fields.map(f => String(f)) })
+    return new FilterBuilder(this.db, this.tableName as TableName, this.schema, this.operations)
   }
 
-  private generateId(): string | number {
-    const pkField = this.tableSchema[this.primaryKey]
-    if (pkField.type === 'string')
-      return uuid()
+  insert(data: TableInsert<TSchema[TableName]>): FilterBuilder<TSchema, TableName> {
+    this.operations.push({ type: 'insert', payload: data })
+    return new FilterBuilder(this.db, this.tableName as TableName, this.schema, this.operations)
+  }
 
-    return 0
+  update(data: Partial<TableInsert<TSchema[TableName]>>): FilterBuilder<TSchema, TableName> {
+    this.operations.push({ type: 'update', payload: data })
+    return new FilterBuilder(this.db, this.tableName as TableName, this.schema, this.operations)
+  }
+
+  upsert(data: Partial<TableInsert<TSchema[TableName]>>): FilterBuilder<TSchema, TableName> {
+    this.operations.push({ type: 'upsert', payload: data })
+    return new FilterBuilder(this.db, this.tableName as TableName, this.schema, this.operations)
+  }
+
+  delete(): FilterBuilder<TSchema, TableName> {
+    this.operations.push({ type: 'delete', payload: null })
+    return new FilterBuilder(this.db, this.tableName as TableName, this.schema, this.operations)
+  }
+}
+
+class FilterBuilder<
+  TSchema extends DatabaseSchema,
+  TableName extends keyof TSchema,
+> extends BaseQueryBuilder<TSchema, TableName> {
+  constructor(
+    db: IDBDatabase,
+    table: TableName,
+    schema: TSchema,
+    operations: Operation[],
+  ) {
+    super(db, table, schema)
+    this.operations = operations
   }
 
   eq<K extends keyof TSchema[TableName]>(
     field: K,
     value: FieldType<TSchema[TableName], K>,
-  ) {
-    this.filters.push({ field, operator: '=', value })
-    return new QueryExecutor(this, async () => this)
+  ): this {
+    this.operations.push({
+      type: 'filter',
+      payload: { field: field as string, operator: 'eq', value },
+    })
+    return this
   }
 
   neq<K extends keyof TSchema[TableName]>(
     field: K,
     value: FieldType<TSchema[TableName], K>,
-  ) {
-    this.filters.push({ field, operator: '!=', value })
-    return new QueryExecutor(this, async () => this)
+  ): this {
+    this.operations.push({
+      type: 'filter',
+      payload: { field: field as string, operator: 'neq', value },
+    })
+    return this
   }
 
   gt<K extends keyof TSchema[TableName]>(
     field: K,
     value: FieldType<TSchema[TableName], K>,
-  ) {
-    this.filters.push({ field, operator: '>', value })
-    return new QueryExecutor(this, async () => this)
+  ): this {
+    this.operations.push({
+      type: 'filter',
+      payload: { field: field as string, operator: 'gt', value },
+    })
+    return this
   }
 
   gte<K extends keyof TSchema[TableName]>(
     field: K,
     value: FieldType<TSchema[TableName], K>,
-  ) {
-    this.filters.push({ field, operator: '>=', value })
-    return new QueryExecutor(this, async () => this)
+  ): this {
+    this.operations.push({
+      type: 'filter',
+      payload: { field: field as string, operator: 'gte', value },
+    })
+    return this
   }
 
   lt<K extends keyof TSchema[TableName]>(
     field: K,
     value: FieldType<TSchema[TableName], K>,
-  ) {
-    this.filters.push({ field, operator: '<', value })
-    return new QueryExecutor(this, async () => this)
+  ): this {
+    this.operations.push({
+      type: 'filter',
+      payload: { field: field as string, operator: 'lt', value },
+    })
+    return this
   }
 
   lte<K extends keyof TSchema[TableName]>(
     field: K,
     value: FieldType<TSchema[TableName], K>,
-  ) {
-    this.filters.push({ field, operator: '<=', value })
-    return new QueryExecutor(this, async () => this)
+  ): this {
+    this.operations.push({
+      type: 'filter',
+      payload: { field: field as string, operator: 'lte', value },
+    })
+    return this
   }
 
-  limit(count: number) {
-    this.limitCount = count
-    return new QueryExecutor(this, async () => this)
+  limit(count: number): this {
+    this.operations.push({ type: 'limit', payload: count })
+    return this
+  }
+
+  order(field: keyof TSchema[TableName], direction: 'asc' | 'desc'): this {
+    this.operations.push({
+      type: 'order',
+      payload: { field: field as string, direction },
+    })
+    return this
+  }
+
+  async run(): Promise<InferSchemaType<TSchema[TableName]>[]> {
+    return this.executeQuery()
   }
 
   async single(): Promise<InferSchemaType<TSchema[TableName]> | null> {
-    const results = await this.select()
+    const results = await this.run()
     return results[0] || null
-  }
-
-  async select<Fields extends (keyof TSchema[TableName])[]>(
-    ...fields: Fields
-  ): Promise<Array<InferSchemaType<TSchema[TableName]>>> {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(this.tableName, 'readonly')
-      const store = transaction.objectStore(this.tableName)
-      const request = store.getAll()
-
-      request.onsuccess = () => {
-        let results = request.result
-
-        results = results.filter((item) => {
-          return this.filters.every((filter) => {
-            switch (filter.operator) {
-              case '=': return item[filter.field] === filter.value
-              case '!=': return item[filter.field] !== filter.value
-              case '>': return item[filter.field] > filter.value
-              case '<': return item[filter.field] < filter.value
-              case '>=': return item[filter.field] >= filter.value
-              case '<=': return item[filter.field] <= filter.value
-              default: return true
-            }
-          })
-        })
-
-        if (this.limitCount !== undefined)
-          results = results.slice(0, this.limitCount)
-
-        results = results.map(item =>
-          selectFields(item, fields),
-        ) as Array<InferSchemaType<TSchema[TableName]>>
-
-        resolve(results)
-      }
-
-      request.onerror = () => reject(request.error)
-    })
-  }
-
-  private async exists(id: number): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(this.tableName, 'readonly')
-      const store = transaction.objectStore(this.tableName)
-      const request = store.get(id)
-
-      request.onsuccess = () => resolve(!!request.result)
-      request.onerror = () => reject(request.error)
-    })
-  }
-
-  insert(
-    data: TableInsert<TSchema[TableName]>,
-  ): QueryExecutor<TSchema, TableName, InferSchemaType<TSchema[TableName]>> {
-    const newData = { ...data }
-    if (!newData[this.primaryKey] && !this.tableSchema[this.primaryKey].autoIncrement) {
-      const id = this.generateId()
-      newData[this.primaryKey] = id as any
-    }
-
-    return new QueryExecutor(this, async () => {
-      const transaction = this.db.transaction(this.tableName, 'readwrite')
-      const store = transaction.objectStore(this.tableName)
-
-      const result = await new Promise<InferSchemaType<TSchema[TableName]>>((resolve, reject) => {
-        const request = store.add(newData)
-        request.onsuccess = () => {
-          newData[this.primaryKey] = request.result as any
-          resolve(newData as InferSchemaType<TSchema[TableName]>)
-        }
-        request.onerror = () => reject(request.error)
-      })
-
-      return result
-    }, newData as InferSchemaType<TSchema[TableName]>)
-  }
-
-  update(
-    data: Partial<TableInsert<TSchema[TableName]>> & { id: number },
-  ): QueryExecutor<TSchema, TableName, InferSchemaType<TSchema[TableName]>> {
-    return new QueryExecutor(this, async () => {
-      const exists = await this.exists(data.id)
-      if (!exists)
-        throw new Error('Record not found')
-
-      const transaction = this.db.transaction(this.tableName, 'readwrite')
-      const store = transaction.objectStore(this.tableName)
-
-      await new Promise((resolve, reject) => {
-        const request = store.put(data)
-        request.onsuccess = () => resolve(undefined)
-        request.onerror = () => reject(request.error)
-      })
-
-      return data as InferSchemaType<TSchema[TableName]>
-    }, data as InferSchemaType<TSchema[TableName]>)
-  }
-
-  upsert(
-    data: TableInsert<TSchema[TableName]> & { id?: number },
-  ): QueryExecutor<TSchema, TableName, InferSchemaType<TSchema[TableName]>> {
-    return new QueryExecutor(this, async () => {
-      const transaction = this.db.transaction(this.tableName, 'readwrite')
-      const store = transaction.objectStore(this.tableName)
-
-      await new Promise((resolve, reject) => {
-        const request = store.put(data)
-        request.onsuccess = () => resolve(undefined)
-        request.onerror = () => reject(request.error)
-      })
-
-      return data as InferSchemaType<TSchema[TableName]>
-    }, data as InferSchemaType<TSchema[TableName]>)
-  }
-
-  delete(): QueryExecutor<TSchema, TableName, void> {
-    return new QueryExecutor(this, async () => {
-      const recordsToDelete = await this.select()
-      const transaction = this.db.transaction(this.tableName, 'readwrite')
-      const store = transaction.objectStore(this.tableName)
-
-      await Promise.all(recordsToDelete.map((record) => {
-        return new Promise<void>((resolve, reject) => {
-          const request = store.delete(record[this.primaryKey] as IDBValidKey)
-          request.onsuccess = () => resolve()
-          request.onerror = () => reject(request.error)
-        })
-      }))
-    })
   }
 }
 
@@ -398,6 +452,6 @@ export class IdbOrm<TSchema extends DatabaseSchema> {
   ): QueryBuilder<TSchema, TableName> {
     if (!this.db)
       throw new Error('Database not connected')
-    return new QueryBuilder<TSchema, TableName>(this.db, name, this.schema)
+    return new QueryBuilder(this.db, name, this.schema)
   }
 }
