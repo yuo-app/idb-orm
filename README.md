@@ -56,7 +56,7 @@ const userIdsAndNames = await db
 `insert()` will insert a new record and return the inserted data.
 
 >[!TIP]
-> It's recommended to use `upsert()` for performance reasons.
+> It's recommended to use `upsert()` which directly inserts or updates a record.
 >
 > - use `insert()` only if you want it to fail when the record already exists
 > - use `update()` only if you want it to fail when the record doesn't exist
@@ -69,14 +69,23 @@ const user = await db
 
 ### Update records
 
-TODO
-
-### Upsert records
+`update()` will update records that match the query and return the updated data.
 
 ```typescript
 const user = await db
   .from('users')
-  .upsert({ name: 'Me', age: 30 })
+  .eq('name', 'Me')
+  .update({ age: 31 })
+```
+
+### Upsert records
+
+`upsert()` will insert a new record or update an existing record and return the data.
+
+```typescript
+const user = await db
+  .from('users')
+  .upsert({ name: 'Me', age: 31 })
 ```
 
 ### Delete records
@@ -84,6 +93,8 @@ const user = await db
 TODO
 
 ### Filter records
+
+Use `eq()`, `neq()`, `gt()`, `gte()`, `lt()`, `lte()` to filter records.
 
 ```typescript
 const adults = await db
@@ -94,9 +105,13 @@ const adults = await db
 
 ### Sort records
 
+Sort records using `order()`.
+
 TODO
 
 ### Limit records
+
+Use `limit()` to return the first N records. Combine this with `sort()` to get the last N records.
 
 ```typescript
 const firstUser = await db
@@ -106,6 +121,8 @@ const firstUser = await db
 ```
 
 ### Retrieve one row of data
+
+`single()` will return just one row of data, and not an array.
 
 ```typescript
 const user = await db

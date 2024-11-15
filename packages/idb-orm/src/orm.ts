@@ -35,6 +35,8 @@ type InferValue<T extends SchemaField> =
           T extends { type: 'array' } ? any[] :
             never
 
+type FieldType<T extends TableSchema, K extends keyof T> = InferValue<T[K]>
+
 type InferSchemaType<T extends TableSchema> = {
   id?: number
 } & {
@@ -149,32 +151,50 @@ class QueryBuilder<
     return 0
   }
 
-  eq(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
+  eq<K extends keyof TSchema[TableName]>(
+    field: K,
+    value: FieldType<TSchema[TableName], K>,
+  ) {
     this.filters.push({ field, operator: '=', value })
     return new QueryExecutor(this, async () => this)
   }
 
-  neq(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
+  neq<K extends keyof TSchema[TableName]>(
+    field: K,
+    value: FieldType<TSchema[TableName], K>,
+  ) {
     this.filters.push({ field, operator: '!=', value })
     return new QueryExecutor(this, async () => this)
   }
 
-  gt(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
+  gt<K extends keyof TSchema[TableName]>(
+    field: K,
+    value: FieldType<TSchema[TableName], K>,
+  ) {
     this.filters.push({ field, operator: '>', value })
     return new QueryExecutor(this, async () => this)
   }
 
-  gte(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
+  gte<K extends keyof TSchema[TableName]>(
+    field: K,
+    value: FieldType<TSchema[TableName], K>,
+  ) {
     this.filters.push({ field, operator: '>=', value })
     return new QueryExecutor(this, async () => this)
   }
 
-  lt(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
+  lt<K extends keyof TSchema[TableName]>(
+    field: K,
+    value: FieldType<TSchema[TableName], K>,
+  ) {
     this.filters.push({ field, operator: '<', value })
     return new QueryExecutor(this, async () => this)
   }
 
-  lte(field: keyof TSchema[TableName], value: TSchema[TableName][typeof field]) {
+  lte<K extends keyof TSchema[TableName]>(
+    field: K,
+    value: FieldType<TSchema[TableName], K>,
+  ) {
     this.filters.push({ field, operator: '<=', value })
     return new QueryExecutor(this, async () => this)
   }
