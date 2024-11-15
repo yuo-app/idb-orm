@@ -5,7 +5,7 @@ A lightweight, type-safe ORM for IndexedDB that closely matches the supabase-js 
 ## Install
 
 ```bash
-npm i @yuo/idb-orm
+npm i @yuo-app/idb-orm
 ```
 
 ## Quick Start
