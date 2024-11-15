@@ -1,5 +1,5 @@
 {
-  "name": "idb-orm",
+  "name": "@yuo/idb-orm",
   "type": "module",
   "version": "0.1.0",
   "description": "A lightweight, type-safe ORM for IndexedDB that closely matches the supabase-js API.",
@@ -22,6 +22,8 @@
   ],
   "module": "index.ts",
   "files": [
+    "dist",
+    "index.ts",
     "src.ts"
   ],
   "scripts": {
