@@ -77,6 +77,14 @@ const userIdsAndNames = await db
   .get()
 ```
 
+### Retrieve all data
+
+`getAll()` can be used to get the entire database.
+
+```typescript
+const allData = await db.getAll()
+```
+
 ### Insert records
 
 `insert()` will insert a new record and return the inserted data.
@@ -178,12 +186,22 @@ const user = await db
   .single()
 ```
 
-### Retrieve all data
+### Get table names
 
-`getAll()` can be used to get the entire database.
+Use `getTableNames()` to get a list of table names.
 
 ```typescript
-const allData = await db.getAll()
+const tableNames = await db.getTableNames() // ['users']
+```
+
+### Delete all data
+
+`clearAll()` will remove all data but keep the tables.
+`deleteAll()` will remove all data and tables.
+
+```typescript
+await db.clearAll()
+await db.deleteAll()
 ```
 
 ### License

@@ -210,6 +210,35 @@ describe('advanced IDB ORM Tests', () => {
     expectTypeOf(results.orderItems).toEqualTypeOf<OrderItem[]>()
     expectTypeOf(results.customers).toEqualTypeOf<Customer[]>()
   })
+
+  it('should return table names from the database', () => {
+    const tableNames = db.getTableNames()
+    expect(tableNames.sort()).toEqual(['products', 'orders', 'orderItems', 'customers'].sort())
+  })
+
+  it('should clear all records but keep tables', async () => {
+    await db.clearAll()
+    const results = await db.getAll()
+
+    expect(Object.keys(results).sort()).toEqual(['products', 'orders', 'orderItems', 'customers'].sort())
+    expect(results.products).toHaveLength(0)
+    expect(results.orders).toHaveLength(0)
+    expect(results.orderItems).toHaveLength(0)
+    expect(results.customers).toHaveLength(0)
+  })
+
+  it('should delete the entire database', async () => {
+    await db.deleteAll()
+
+    // Try to reconnect - should create fresh database
+    await db.connect()
+
+    const tableNames = db.getTableNames()
+    expect(tableNames.sort()).toEqual(['products', 'orders', 'orderItems', 'customers'].sort())
+
+    const results = await db.getAll()
+    expect(results.products).toHaveLength(0)
+  })
 })
 
 async function seedTestData(db: IdbOrm<typeof advancedSchema>) {

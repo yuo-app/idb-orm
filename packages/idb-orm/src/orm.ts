@@ -88,4 +88,36 @@ export class IdbOrm<TSchema extends DatabaseSchema> {
       transaction.onerror = () => reject(transaction.error)
     })
   }
+
+  getTableNames(): string[] {
+    if (!this.db)
+      throw new Error('Database not connected')
+    return Array.from(this.db.objectStoreNames)
+  }
+
+  async clearAll(): Promise<void> {
+    if (!this.db)
+      throw new Error('Database not connected')
+
+    const tableNames = this.getTableNames()
+    const transaction = this.db.transaction(tableNames, 'readwrite')
+
+    await Promise.all(
+      tableNames.map(tableName => new Promise<void>((resolve, reject) => {
+        const store = transaction.objectStore(tableName)
+        const request = store.clear()
+        request.onsuccess = () => resolve()
+        request.onerror = () => reject(request.error)
+      })),
+    )
+  }
+
+  async deleteAll(): Promise<void> {
+    this.disconnect()
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase(this.dbName)
+      request.onsuccess = () => resolve()
+      request.onerror = () => reject(request.error)
+    })
+  }
 }
