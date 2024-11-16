@@ -1,4 +1,4 @@
-import type { DatabaseSchema } from './types'
+import type { DatabaseResults, DatabaseSchema } from './types'
 import { QueryBuilder } from './builders/query'
 
 export class IdbOrm<TSchema extends DatabaseSchema> {
@@ -60,5 +60,32 @@ export class IdbOrm<TSchema extends DatabaseSchema> {
     if (!this.db)
       throw new Error('Database not connected')
     return new QueryBuilder(this.db, name, this.schema)
+  }
+
+  async getAll(): Promise<DatabaseResults<TSchema>> {
+    if (!this.db)
+      throw new Error('Database not connected')
+
+    return new Promise((resolve, reject) => {
+      if (!this.db)
+        return
+
+      const tableNames = Array.from(this.db.objectStoreNames)
+      const transaction = this.db.transaction(tableNames, 'readonly')
+      const result = {} as DatabaseResults<TSchema>
+
+      tableNames.forEach((tableName) => {
+        const store = transaction.objectStore(tableName)
+        const request = store.getAll()
+
+        request.onsuccess = () => {
+          result[tableName as keyof TSchema] = request.result
+        }
+        request.onerror = () => reject(request.error)
+      })
+
+      transaction.oncomplete = () => resolve(result)
+      transaction.onerror = () => reject(transaction.error)
+    })
   }
 }

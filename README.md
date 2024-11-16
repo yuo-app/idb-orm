@@ -27,9 +27,11 @@ type DB = Database<typeof schema>
 type User = DB['users'] // { id?: number, name: string, age: number }
 
 // Initialize and connect
-const db = new IdbOrm('myDatabase', 1, schema)
+const db = new IdbOrm('database', 1, schema)
 await db.connect()
 ```
+
+Don't forget to increment the database version when you change the schema!
 
 ## Schema
 
@@ -174,6 +176,14 @@ const user = await db
   .from('users')
   .limit(1)
   .single()
+```
+
+### Retrieve all data
+
+`getAll()` can be used to get the entire database.
+
+```typescript
+const allData = await db.getAll()
 ```
 
 ### License

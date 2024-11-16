@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { type DatabaseSchema, IdbOrm } from '../src'
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from 'vitest'
+import { type Database, type DatabaseSchema, IdbOrm } from '../src'
 
 const advancedSchema = {
   products: {
@@ -33,6 +33,12 @@ const advancedSchema = {
     lastLoginAt: { type: 'number' },
   },
 } satisfies DatabaseSchema
+
+type DB = Database<typeof advancedSchema>
+type Product = DB['products']
+type Order = DB['orders']
+type OrderItem = DB['orderItems']
+type Customer = DB['customers']
 
 describe('advanced IDB ORM Tests', () => {
   let db: IdbOrm<typeof advancedSchema>
@@ -184,6 +190,25 @@ describe('advanced IDB ORM Tests', () => {
     expect(products).toHaveLength(2)
     expect(products[0][0].name).toBe('Updated Product 1')
     expect(products[1][0].name).toBe('New Product')
+  })
+
+  it('should return all tables in the database', async () => {
+    const results = await db.getAll()
+
+    expect(results).toHaveProperty('products')
+    expect(results).toHaveProperty('orders')
+    expect(results).toHaveProperty('orderItems')
+    expect(results).toHaveProperty('customers')
+
+    expect(results.products).toHaveLength(4)
+    expect(results.orders).toHaveLength(3)
+    expect(results.orderItems).toHaveLength(5)
+    expect(results.customers).toHaveLength(2)
+
+    expectTypeOf(results.products).toEqualTypeOf<Product[]>()
+    expectTypeOf(results.orders).toEqualTypeOf<Order[]>()
+    expectTypeOf(results.orderItems).toEqualTypeOf<OrderItem[]>()
+    expectTypeOf(results.customers).toEqualTypeOf<Customer[]>()
   })
 })
 

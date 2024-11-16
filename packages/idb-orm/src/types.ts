@@ -57,10 +57,6 @@ export type InferSchemaType<T extends TableSchema> = {
   [K in keyof T as T[K] extends { primaryKey: true } | { required: true } ? never : K]?: InferValue<T[K]>
 }
 
-export type Database<T extends DatabaseSchema> = {
-  [TableName in keyof T]: InferSchemaType<T[TableName]>
-}
-
 type RequiredKeys<T extends TableSchema> = {
   [K in keyof T]: T[K] extends { required: true } ? K : never
 }[keyof T]
@@ -73,4 +69,12 @@ export type TableInsert<T extends TableSchema> = {
   [K in RequiredKeys<T>]: InferValue<T[K]>
 } & {
   [K in OptionalKeys<T> | PrimaryKeyField<T>]?: InferValue<T[K]>
+}
+
+export type Database<T extends DatabaseSchema> = {
+  [TableName in keyof T]: InferSchemaType<T[TableName]>
+}
+
+export type DatabaseResults<T extends DatabaseSchema> = {
+  [TableName in keyof T]: InferSchemaType<T[TableName]>[]
 }

@@ -7,9 +7,11 @@
 - [x] plan new chain system with claude
 - [x] unbuild and publish
 - [ ] add date type
+- [ ] count records
 
 ## v0.2.0
 
+- [ ] migrations for idb? handle version
 - [ ] mirror supabase schema
 - [ ] augment supabase and manage idb and remote supabase db at once, use offline/online whichever is available
 - [ ] sync data between idb and remote
