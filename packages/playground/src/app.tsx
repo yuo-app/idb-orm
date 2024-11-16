@@ -6,9 +6,9 @@ import { IdbOrm } from './../../idb-orm'
 
 const schema = {
   users: {
-    id: { type: 'number', primaryKey: true, autoIncrement: true },
+    id: { type: 'string', primaryKey: true },
     name: { type: 'string', required: true },
-    email: { type: 'string', required: true },
+    email: { type: 'string' },
     age: { type: 'number', required: true, default: 18 },
   },
 } satisfies DatabaseSchema

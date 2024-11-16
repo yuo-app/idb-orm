@@ -52,9 +52,9 @@ export type InferValue<T extends SchemaField> = TypeMap[T['type']]
 export type FieldType<T extends TableSchema, K extends keyof T> = InferValue<T[K]>
 
 export type InferSchemaType<T extends TableSchema> = {
-  id?: number
+  [K in keyof T as T[K] extends { primaryKey: true } | { required: true } ? K : never]: InferValue<T[K]>
 } & {
-  [K in keyof T]: InferValue<T[K]>
+  [K in keyof T as T[K] extends { primaryKey: true } | { required: true } ? never : K]?: InferValue<T[K]>
 }
 
 export type Database<T extends DatabaseSchema> = {
@@ -66,7 +66,7 @@ type RequiredKeys<T extends TableSchema> = {
 }[keyof T]
 
 type OptionalKeys<T extends TableSchema> = {
-  [K in keyof T]: T[K] extends { required: true } ? never : K
+  [K in keyof T]: T[K] extends { required: true } | { primaryKey: true } ? never : K
 }[keyof T]
 
 export type TableInsert<T extends TableSchema> = {

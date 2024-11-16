@@ -34,12 +34,6 @@ const advancedSchema = {
   },
 } satisfies DatabaseSchema
 
-// type DB = Database<typeof advancedSchema>
-// type Product = DB['products']
-// type Order = DB['orders']
-// type OrderItem = DB['orderItems']
-// type Customer = DB['customers']
-
 describe('advanced IDB ORM Tests', () => {
   let db: IdbOrm<typeof advancedSchema>
 
