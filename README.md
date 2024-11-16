@@ -11,7 +11,7 @@ npm i @yuo-app/idb-orm
 ## Quick Start
 
 ```typescript
-import { type Database, type DatabaseSchema, IdbOrm } from 'idb-orm'
+import { type Database, type DatabaseSchema, IdbOrm } from '@yuo-app/idb-orm'
 
 // Define your database schema
 const schema = {
@@ -42,11 +42,7 @@ Use `primaryKey: true` to define a primary key.
 
 ### Types
 
-- `type: 'string'`
-- `type: 'number'`
-- `type: 'boolean'`
-- `type: 'object'`
-- `type: 'array'`
+`string`, `number`, `boolean`, `array`, `object`
 
 Use `required: true` to enforce a field to be non-nullable.
 Use `defaultValue: any` to set a default value.
@@ -90,9 +86,10 @@ const userIdsAndNames = await db
 > - `update()` will not fail if the record does not exist, it will return an empty array
 
 ```typescript
-const user = await db
+await db
   .from('users')
   .insert({ name: 'Me', age: 30 })
+  .get()
 ```
 
 ### Update records
@@ -100,10 +97,10 @@ const user = await db
 `update()` will update records that match the query and return the updated data.
 
 ```typescript
-const user = await db
+await db
   .from('users')
-  .eq('name', 'Me')
   .update({ age: 31 })
+  .eq('name', 'Me')
   .get()
 ```
 
@@ -112,7 +109,7 @@ const user = await db
 `upsert()` will insert a new record or update an existing record and return the data.
 
 ```typescript
-const user = await db
+await db
   .from('users')
   .upsert({ name: 'Me', age: 31 })
   .get()
@@ -125,8 +122,8 @@ const user = await db
 ```typescript
 await db
   .from('users')
-  .eq('name', 'Me')
   .delete()
+  .eq('name', 'Me')
   .get()
 ```
 
@@ -137,8 +134,8 @@ Use `eq()`, `neq()`, `gt()`, `gte()`, `lt()`, `lte()` to filter records.
 ```typescript
 const adults = await db
   .from('users')
-  .gte('age', 18)
   .select()
+  .gte('age', 18)
   .get()
 ```
 

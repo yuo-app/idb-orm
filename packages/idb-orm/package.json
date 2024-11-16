@@ -20,9 +20,8 @@
     "supabase",
     "supabase-js"
   ],
-  "module": "index.ts",
+  "module": "./dist/index.mjs",
   "files": [
-    "README.md",
     "dist"
   ],
   "scripts": {
