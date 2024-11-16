@@ -24,6 +24,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs"
+    },
+    "./src": {
+      "types": "./dist/src.d.ts",
+      "import": "./dist/src.mjs"
     }
   },
   "module": "./dist/index.mjs",
