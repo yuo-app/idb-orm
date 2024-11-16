@@ -3,11 +3,7 @@
   "type": "module",
   "private": true,
   "packageManager": "bun@1.1.35",
-  "module": "index.ts",
   "scripts": {
-    "dev": "unbuild --stub packages/idb-orm",
-    "dev:play": "vite packages/playground",
-    "build": "unbuild packages/idb-orm",
     "lint": "eslint . --fix",
     "typecheck": "tsc packages/idb-orm/index.ts --noEmit --skipLibCheck",
     "test": "vitest --coverage",
