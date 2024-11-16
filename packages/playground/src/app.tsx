@@ -9,7 +9,7 @@ const schema = {
     id: { type: 'number', primaryKey: true, autoIncrement: true },
     name: { type: 'string', required: true },
     email: { type: 'string', required: true },
-    age: { type: 'number', required: true },
+    age: { type: 'number', required: true, default: 18 },
   },
 } satisfies DatabaseSchema
 

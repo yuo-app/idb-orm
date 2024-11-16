@@ -18,7 +18,7 @@ const schema = {
   users: {
     id: { type: 'number', primaryKey: true },
     name: { type: 'string', required: true },
-    age: { type: 'number', required: true },
+    age: { type: 'number', required: true, default: 18 },
   }
 } satisfies DatabaseSchema
 
@@ -45,7 +45,7 @@ Use `primaryKey: true` to define a primary key.
 `string`, `number`, `boolean`, `array`, `object`
 
 Use `required: true` to enforce a field to be non-nullable.
-Use `defaultValue: any` to set a default value.
+Use `default` to set a default value.
 
 ## API
 

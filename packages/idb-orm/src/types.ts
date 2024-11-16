@@ -1,10 +1,22 @@
-export interface SchemaField {
-  type: 'string' | 'number' | 'boolean' | 'object' | 'array'
-  required?: boolean
-  defaultValue?: any
-  primaryKey?: boolean
-  autoIncrement?: boolean
+export type Field = 'string' | 'number' | 'boolean' | 'object' | 'array'
+
+export interface TypeMap {
+  string: string
+  number: number
+  boolean: boolean
+  object: object
+  array: any[]
 }
+
+export type SchemaField = {
+  [T in Field]: {
+    type: T
+    required?: boolean
+    default?: TypeMap[T]
+    primaryKey?: boolean
+    autoIncrement?: boolean
+  }
+}[Field]
 
 export interface TableSchema {
   [key: string]: SchemaField
@@ -35,13 +47,7 @@ export interface FilterCondition {
   value: any
 }
 
-export type InferValue<T extends SchemaField> =
-  T extends { type: 'string' } ? string :
-    T extends { type: 'number' } ? number :
-      T extends { type: 'boolean' } ? boolean :
-        T extends { type: 'object' } ? object :
-          T extends { type: 'array' } ? any[] :
-            never
+export type InferValue<T extends SchemaField> = TypeMap[T['type']]
 
 export type FieldType<T extends TableSchema, K extends keyof T> = InferValue<T[K]>
 
