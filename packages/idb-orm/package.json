@@ -1,7 +1,7 @@
 {
   "name": "@yuo-app/idb-orm",
   "type": "module",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "A lightweight, type-safe ORM for IndexedDB that closely matches the supabase-js API.",
   "author": "Rettend",
   "license": "MIT",
