@@ -18,13 +18,13 @@ const schema = {
   users: {
     id: { type: 'number', primaryKey: true },
     name: { type: 'string', required: true },
-    age: { type: 'number', required: true, default: 18 },
+    age: { type: 'number' },
   }
 } satisfies DatabaseSchema
 
 // Types are automatically inferred from schema
 type DB = Database<typeof schema>
-type User = DB['users'] // { id?: number, name: string, age: number }
+type User = DB['users'] // { id: number, name: string, age?: number }
 
 // Initialize and connect
 const db = new IdbOrm('database', 1, schema)
