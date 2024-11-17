@@ -52,21 +52,38 @@ export type InferValue<T extends SchemaField> = TypeMap[T['type']]
 export type FieldType<T extends TableSchema, K extends keyof T> = InferValue<T[K]>
 
 export type InferSchemaType<T extends TableSchema> = {
-  [K in keyof T as T[K] extends { primaryKey: true } | { required: true } ? K : never]: InferValue<T[K]>
+  [K in keyof T as T[K] extends { primaryKey: true }
+    ? K
+    : T[K] extends { required: true } | { default: any }
+      ? K
+      : never]: InferValue<T[K]>
 } & {
-  [K in keyof T as T[K] extends { primaryKey: true } | { required: true } ? never : K]?: InferValue<T[K]>
+  [K in keyof T as T[K] extends { primaryKey: true }
+    ? never
+    : T[K] extends { required: true } | { default: any }
+      ? never
+      : K]?: InferValue<T[K]>
 }
+
+type HasDefault<T extends SchemaField> = T extends { default: any } ? true : false
+
+type DefaultKeys<T extends TableSchema> = {
+  [K in keyof T]: HasDefault<T[K]> extends true ? K : never
+}[keyof T]
 
 type RequiredKeys<T extends TableSchema> = {
   [K in keyof T]: T[K] extends { required: true } ? K : never
 }[keyof T]
 
 type OptionalKeys<T extends TableSchema> = {
-  [K in keyof T]: T[K] extends { required: true } | { primaryKey: true } ? never : K
+  [K in keyof T]:
+  T[K] extends { required: true } | { default: any } | { primaryKey: true }
+    ? never
+    : K
 }[keyof T]
 
 export type TableInsert<T extends TableSchema> = {
-  [K in RequiredKeys<T>]: InferValue<T[K]>
+  [K in RequiredKeys<T> | DefaultKeys<T>]: InferValue<T[K]>
 } & {
   [K in OptionalKeys<T> | PrimaryKeyField<T>]?: InferValue<T[K]>
 }
@@ -78,3 +95,6 @@ export type Database<T extends DatabaseSchema> = {
 export type DatabaseResults<T extends DatabaseSchema> = {
   [TableName in keyof T]: InferSchemaType<T[TableName]>[]
 }
+
+export type Insert<T extends TableSchema> = TableInsert<T>
+export type Update<T extends TableSchema> = Partial<TableInsert<T>>

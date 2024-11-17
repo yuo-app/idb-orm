@@ -5,4 +5,6 @@ export {
 export type {
   Database,
   DatabaseSchema,
+  Insert,
+  Update,
 } from './src/types'

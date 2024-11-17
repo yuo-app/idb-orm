@@ -1,8 +1,9 @@
+import type { Database, DatabaseSchema } from '@orm/index'
+import type { Insert, Update } from '@orm/src/types'
 import type { Component } from 'solid-js'
-import type { Database, DatabaseSchema } from './../../idb-orm/index'
+import { IdbOrm } from '@orm/index'
 import { createSignal, For } from 'solid-js'
 import { createStore, reconcile } from 'solid-js/store'
-import { IdbOrm } from './../../idb-orm/index'
 
 const schema = {
   users: {
@@ -22,6 +23,13 @@ const schema = {
 type DB = Database<typeof schema>
 type User = DB['users']
 type Post = DB['posts']
+type UserInsert = Insert<typeof schema['users']>
+type UserUpdate = Update<typeof schema['users']>
+
+const userInsert: UserInsert = {
+  name: 'John Doe',
+  age: 30,
+}
 
 const App: Component = () => {
   let db: IdbOrm<typeof schema> | undefined

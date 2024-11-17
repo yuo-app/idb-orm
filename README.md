@@ -102,6 +102,13 @@ await db
   .get()
 ```
 
+Use the `Insert` and `Update` helper types to create your actions.
+
+```typescript
+type UserInsert = Insert<typeof schema['users']> // id is optional
+type UserUpdate = Update<typeof schema['users']> // all fields are optional (Partial<> also works)
+```
+
 ### Update records
 
 `update()` will update records that match the query and return the updated data.

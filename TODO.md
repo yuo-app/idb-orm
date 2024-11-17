@@ -6,7 +6,7 @@
 - [x] write tests for new chain system
 - [x] plan new chain system with claude
 - [x] unbuild and publish
-- [ ] in schema when something is not required but has a default value, it should not be an optional type
+- [x] in schema when something is not required but has a default value, it should not be an optional type
 - [ ] add date type
 - [ ] count records
 
