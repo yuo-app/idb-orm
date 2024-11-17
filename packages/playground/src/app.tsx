@@ -23,13 +23,6 @@ const schema = {
 type DB = Database<typeof schema>
 type User = DB['users']
 type Post = DB['posts']
-type UserInsert = Insert<typeof schema['users']>
-type UserUpdate = Update<typeof schema['users']>
-
-const userInsert: UserInsert = {
-  name: 'John Doe',
-  age: 30,
-}
 
 const App: Component = () => {
   let db: IdbOrm<typeof schema> | undefined
