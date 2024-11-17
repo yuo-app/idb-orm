@@ -1,4 +1,4 @@
-import type { Database, DatabaseSchema, Insert, TableInsert, Update } from '../src'
+import type { Database, DatabaseSchema, Insert, Update } from '../src'
 import { describe, expectTypeOf, it } from 'vitest'
 
 // eslint-disable-next-line unused-imports/no-unused-vars
@@ -6,23 +6,23 @@ const schema = {
   users: {
     id: { type: 'string', primaryKey: true },
     name: { type: 'string', required: true },
-    email: { type: 'string' }, // optional
+    email: { type: 'string' },
     age: { type: 'number', required: true },
-    meta: { type: 'object' }, // optional
+    meta: { type: 'object' },
   },
   posts: {
     id: { type: 'number', primaryKey: true, autoIncrement: true },
     title: { type: 'string', required: true },
     published: { type: 'boolean', default: false },
-    tags: { type: 'array' }, // optional
+    tags: { type: 'array' },
   },
 } satisfies DatabaseSchema
 
 type DB = Database<typeof schema>
 
 type User = DB['users']
-type UserUpdate = Partial<TableInsert<(typeof schema)['users']>>
-type UserInsert = TableInsert<(typeof schema)['users']>
+type UserUpdate = Update<typeof schema['users']>
+type UserInsert = Insert<typeof schema['users']>
 type UserNameOnly = Pick<DB['users'], 'name'>
 type UserWithoutMeta = Omit<DB['users'], 'meta'>
 type RequiredUserFields = Required<DB['users']>
@@ -122,16 +122,16 @@ const extendedSchema = {
     id: { type: 'string', primaryKey: true },
     username: { type: 'string', required: true },
     email: { type: 'string', default: 'example@example.com' },
-    age: { type: 'number' }, // optional
+    age: { type: 'number' },
     isActive: { type: 'boolean', default: true },
-    profile: { type: 'object' }, // optional
+    profile: { type: 'object' },
   },
   articles: {
     id: { type: 'number', primaryKey: true, autoIncrement: true },
     title: { type: 'string', required: true },
-    content: { type: 'string' }, // optional
+    content: { type: 'string' },
     publishedAt: { type: 'number', default: Date.now() },
-    tags: { type: 'array' }, // optional
+    tags: { type: 'array' },
   },
 } satisfies DatabaseSchema
 
@@ -161,8 +161,8 @@ describe('extended schema Types', () => {
     expectTypeOf<ExtendedUserInsert>().toMatchTypeOf<{
       id?: string
       username: string
-      email: string
-      isActive: boolean
+      email?: string
+      isActive?: boolean
       age?: number
       profile?: object
     }>()
@@ -216,7 +216,7 @@ describe('extended schema Types', () => {
     expectTypeOf<ArticleInsert>().toMatchTypeOf<{
       id?: number
       title: string
-      publishedAt: number
+      publishedAt?: number
       content?: string
       tags?: any[]
     }>()

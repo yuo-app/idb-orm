@@ -1,5 +1,4 @@
 import type { Database, DatabaseSchema } from '@orm/index'
-import type { Insert, Update } from '@orm/src/types'
 import type { Component } from 'solid-js'
 import { IdbOrm } from '@orm/index'
 import { createSignal, For } from 'solid-js'

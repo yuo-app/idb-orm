@@ -105,7 +105,7 @@ await db
 Use the `Insert` and `Update` helper types to create your actions.
 
 ```typescript
-type UserInsert = Insert<typeof schema['users']> // id is optional
+type UserInsert = Insert<typeof schema['users']> // id is optional, fields with default values are optional
 type UserUpdate = Update<typeof schema['users']> // all fields are optional (Partial<> also works)
 ```
 
