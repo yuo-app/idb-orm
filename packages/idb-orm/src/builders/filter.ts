@@ -103,8 +103,8 @@ export class FilterBuilder<
     return this.executeQuery()
   }
 
-  async single(): Promise<InferSchemaType<TSchema[TableName]> | null> {
+  async single(): Promise<InferSchemaType<TSchema[TableName]> | undefined> {
     const results = await this.get()
-    return results[0] || null
+    return results[0] || undefined
   }
 }

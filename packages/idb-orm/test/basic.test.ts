@@ -189,7 +189,7 @@ describe('idbOrm', () => {
 
       expect(user).toBeDefined()
       expect(user?.name).toBe('Test User')
-      expectTypeOf(user).toEqualTypeOf<User | null>()
+      expectTypeOf(user).toEqualTypeOf<User | undefined>()
     })
 
     it('comparison operators', async () => {
