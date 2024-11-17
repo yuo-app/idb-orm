@@ -2,8 +2,9 @@ import type { DatabaseResults, DatabaseSchema } from './types'
 import { QueryBuilder } from './builders/query'
 
 export class IdbOrm<TSchema extends DatabaseSchema> {
-  private dbName: string
-  private version: number
+  public dbName: string
+  public version: number
+  public connected = false
   private schema: TSchema
   private db?: IDBDatabase
 
@@ -14,6 +15,9 @@ export class IdbOrm<TSchema extends DatabaseSchema> {
   }
 
   async connect(): Promise<void> {
+    if (this.connected)
+      return
+
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version)
 
@@ -21,6 +25,7 @@ export class IdbOrm<TSchema extends DatabaseSchema> {
 
       request.onsuccess = () => {
         this.db = request.result
+        this.connected = true
         resolve()
       }
 
@@ -51,19 +56,20 @@ export class IdbOrm<TSchema extends DatabaseSchema> {
     if (this.db) {
       this.db.close()
       this.db = undefined
+      this.connected = false
     }
   }
 
   from<TableName extends keyof TSchema>(
     name: TableName,
   ): QueryBuilder<TSchema, TableName> {
-    if (!this.db)
+    if (!this.connected)
       throw new Error('Database not connected')
-    return new QueryBuilder(this.db, name, this.schema)
+    return new QueryBuilder(this.db!, name, this.schema)
   }
 
   async getAll(): Promise<DatabaseResults<TSchema>> {
-    if (!this.db)
+    if (!this.connected)
       throw new Error('Database not connected')
 
     return new Promise((resolve, reject) => {
@@ -90,13 +96,13 @@ export class IdbOrm<TSchema extends DatabaseSchema> {
   }
 
   getTableNames(): string[] {
-    if (!this.db)
+    if (!this.connected)
       throw new Error('Database not connected')
-    return Array.from(this.db.objectStoreNames)
+    return Array.from(this.db!.objectStoreNames)
   }
 
   async clearAll(): Promise<void> {
-    if (!this.db)
+    if (!this.connected || !this.db)
       throw new Error('Database not connected')
 
     const tableNames = this.getTableNames()
