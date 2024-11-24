@@ -12,7 +12,7 @@ export type SchemaField = {
   [T in Field]: {
     type: T
     required?: boolean
-    default?: TypeMap[T]
+    default?: TypeMap[T] | (() => TypeMap[T])
     primaryKey?: boolean
     autoIncrement?: boolean
   }

@@ -116,17 +116,30 @@ export abstract class BaseQueryBuilder<
     }
   }
 
+  private applyDefaults(data: any): void {
+    for (const [field, schema] of Object.entries(this.tableSchema)) {
+      if (data[field] === undefined && 'default' in schema) {
+        const defaultValue = schema.default
+        data[field] = typeof defaultValue === 'function'
+          ? (defaultValue as () => any)()
+          : defaultValue
+      }
+    }
+  }
+
   private async handleInsert(store: IDBObjectStore, data: any): Promise<any[]> {
-    this.ensurePrimaryKey(data)
+    const record = { ...data }
+    this.ensurePrimaryKey(record)
+    this.applyDefaults(record)
 
     return new Promise((resolve, reject) => {
-      const request = store.add(data)
+      const request = store.add(record)
       request.onsuccess = () => {
         // For auto-increment fields, update the id
-        if (request.result !== data.id)
-          data.id = request.result
+        if (request.result !== record.id)
+          record.id = request.result
 
-        resolve([data])
+        resolve([record])
       }
       request.onerror = () => reject(request.error)
     })
@@ -176,11 +189,13 @@ export abstract class BaseQueryBuilder<
   }
 
   private async handleUpsert(store: IDBObjectStore, data: any): Promise<any[]> {
-    this.ensurePrimaryKey(data)
+    const record = { ...data }
+    this.ensurePrimaryKey(record)
+    this.applyDefaults(record)
 
     return new Promise((resolve, reject) => {
-      const request = store.put(data)
-      request.onsuccess = () => resolve([data])
+      const request = store.put(record)
+      request.onsuccess = () => resolve([record])
       request.onerror = () => reject(request.error)
     })
   }

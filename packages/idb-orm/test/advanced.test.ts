@@ -7,16 +7,16 @@ const advancedSchema = {
     name: { type: 'string', required: true },
     price: { type: 'number', required: true },
     category: { type: 'string', required: true },
-    inStock: { type: 'boolean', required: true },
-    tags: { type: 'array' },
-    metadata: { type: 'object' },
+    inStock: { type: 'boolean', default: false },
+    tags: { type: 'array', default: [] },
+    metadata: { type: 'object', default: {} },
   },
   orders: {
     id: { type: 'number', primaryKey: true, autoIncrement: true },
     customerId: { type: 'number', required: true },
     totalAmount: { type: 'number', required: true },
-    status: { type: 'string', required: true },
-    createdAt: { type: 'number', required: true },
+    status: { type: 'string', default: 'pending' },
+    createdAt: { type: 'number', default: () => Date.now() },
   },
   orderItems: {
     id: { type: 'number', primaryKey: true, autoIncrement: true },
@@ -29,8 +29,8 @@ const advancedSchema = {
     id: { type: 'string', primaryKey: true },
     name: { type: 'string', required: true },
     email: { type: 'string', required: true },
-    tier: { type: 'string', required: true },
-    lastLoginAt: { type: 'number' },
+    tier: { type: 'string', default: 'bronze' },
+    lastLoginAt: { type: 'number', default: () => Date.now() },
   },
 } satisfies DatabaseSchema
 
@@ -192,6 +192,49 @@ describe('advanced IDB ORM Tests', () => {
     expect(products[1][0].name).toBe('New Product')
   })
 
+  it('handles basic delete operations', async () => {
+    const beforeCount = (await db.from('products').select().get()).length
+
+    await db.from('products')
+      .delete()
+      .eq('name', 'Book')
+      .get()
+
+    const afterCount = (await db.from('products').select().get()).length
+    expect(afterCount).toBe(beforeCount - 1)
+
+    const deletedProduct = await db.from('products')
+      .select()
+      .eq('name', 'Book')
+      .get()
+    expect(deletedProduct).toHaveLength(0)
+  })
+
+  it('handles delete with multiple conditions', async () => {
+    await db.from('products')
+      .delete()
+      .eq('category', 'electronics')
+      .gte('price', 500)
+      .get()
+
+    const remaining = await db.from('products')
+      .select()
+      .eq('category', 'electronics')
+      .gte('price', 500)
+      .get()
+
+    expect(remaining).toHaveLength(0)
+
+    // Verify cheaper electronics still exist
+    const cheapElectronics = await db.from('products')
+      .select()
+      .eq('category', 'electronics')
+      .lt('price', 500)
+      .get()
+
+    expect(cheapElectronics.length).toBeGreaterThan(0)
+  })
+
   it('should return all tables in the database', async () => {
     const results = await db.getAll()
 
@@ -200,10 +243,10 @@ describe('advanced IDB ORM Tests', () => {
     expect(results).toHaveProperty('orderItems')
     expect(results).toHaveProperty('customers')
 
-    expect(results.products).toHaveLength(4)
+    expect(results.products).toHaveLength(5)
     expect(results.orders).toHaveLength(3)
     expect(results.orderItems).toHaveLength(5)
-    expect(results.customers).toHaveLength(2)
+    expect(results.customers).toHaveLength(3)
 
     expectTypeOf(results.products).toEqualTypeOf<Product[]>()
     expectTypeOf(results.orders).toEqualTypeOf<Order[]>()
@@ -239,16 +282,95 @@ describe('advanced IDB ORM Tests', () => {
     const results = await db.getAll()
     expect(results.products).toHaveLength(0)
   })
+
+  it('handles default values correctly', async () => {
+    // Test product creation with defaults
+    const product = await db.from('products')
+      .insert({ name: 'Default Product', price: 49.99, category: 'misc' })
+      .get()
+
+    expect(product[0]).toMatchObject({
+      name: 'Default Product',
+      price: 49.99,
+      category: 'misc',
+      inStock: false,
+      tags: [],
+      metadata: {},
+    })
+
+    // Test order creation with defaults
+    const order = await db.from('orders')
+      .insert({ customerId: 1, totalAmount: 49.99 })
+      .get()
+
+    expect(order[0]).toMatchObject({
+      customerId: 1,
+      totalAmount: 49.99,
+      status: 'pending',
+    })
+    expect(order[0].createdAt).toBeTypeOf('number')
+    expect(order[0].createdAt).toBeLessThanOrEqual(Date.now())
+
+    // Test customer creation with defaults
+    const customer = await db.from('customers')
+      .insert({ name: 'Bob', email: 'bob@example.com' })
+      .get()
+
+    expect(customer[0]).toMatchObject({
+      name: 'Bob',
+      email: 'bob@example.com',
+      tier: 'bronze',
+    })
+    expect(customer[0].lastLoginAt).toBeTypeOf('number')
+    expect(customer[0].lastLoginAt).toBeLessThanOrEqual(Date.now())
+  })
+
+  it('allows overriding default values', async () => {
+    const now = Date.now()
+
+    const product = await db.from('products')
+      .insert({
+        name: 'Override Product',
+        price: 99.99,
+        category: 'test',
+        inStock: true,
+        tags: ['test'],
+        metadata: { test: true },
+      })
+      .get()
+
+    expect(product[0]).toMatchObject({
+      inStock: true,
+      tags: ['test'],
+      metadata: { test: true },
+    })
+
+    const customer = await db.from('customers')
+      .insert({
+        name: 'Alice',
+        email: 'alice@example.com',
+        tier: 'gold',
+        lastLoginAt: now,
+      })
+      .get()
+
+    expect(customer[0]).toMatchObject({
+      tier: 'gold',
+      lastLoginAt: now,
+    })
+  })
 })
 
 async function seedTestData(db: IdbOrm<typeof advancedSchema>) {
   await db.from('customers').insert({ name: 'John Doe', email: 'john@example.com', tier: 'gold', lastLoginAt: Date.now() }).get()
   await db.from('customers').insert({ name: 'Jane Smith', email: 'jane@example.com', tier: 'silver', lastLoginAt: Date.now() }).get()
+  await db.from('customers').insert({ name: 'Bob Default', email: 'bob.default@example.com' }).get()
 
   await db.from('products').insert({ name: 'Laptop', price: 999.99, category: 'electronics', inStock: true }).get()
   await db.from('products').insert({ name: 'Phone', price: 599.99, category: 'electronics', inStock: true }).get()
   await db.from('products').insert({ name: 'Headphones', price: 99.99, category: 'electronics', inStock: true }).get()
   await db.from('products').insert({ name: 'Book', price: 19.99, category: 'books', inStock: true }).get()
+  await db.from('products').insert({ name: 'Default Product', price: 29.99, category: 'test' }).get()
 
   await db.from('orders').insert({ customerId: 1, totalAmount: 1599.98, status: 'completed', createdAt: Date.now() }).get()
   await db.from('orders').insert({ customerId: 2, totalAmount: 1099.98, status: 'pending', createdAt: Date.now() }).get()

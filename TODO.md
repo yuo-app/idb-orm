@@ -7,6 +7,9 @@
 - [x] plan new chain system with claude
 - [x] unbuild and publish
 - [x] in schema when something is not required but has a default value, it should not be an optional type
+- [x] default values should work
+
+- [ ] batch delete + other batch
 - [ ] add date type
 - [ ] count records
 
