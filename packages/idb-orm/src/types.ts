@@ -4,7 +4,7 @@ export interface TypeMap {
   string: string
   number: number
   boolean: boolean
-  object: object
+  object: Record<string, any>
   array: any[]
 }
 
