@@ -127,8 +127,12 @@ export abstract class BaseQueryBuilder<
     }
   }
 
+  private deepClone<T>(obj: T): T {
+    return JSON.parse(JSON.stringify(obj))
+  }
+
   private async handleInsert(store: IDBObjectStore, data: any): Promise<any[]> {
-    const record = { ...data }
+    const record = this.deepClone({ ...data })
     this.ensurePrimaryKey(record)
     this.applyDefaults(record)
 
@@ -163,7 +167,7 @@ export abstract class BaseQueryBuilder<
     if (!data.id) {
       return Promise.all(
         records.map((record) => {
-          const updatedRecord = { ...record, ...data }
+          const updatedRecord = this.deepClone({ ...record, ...data })
           return new Promise((resolve, reject) => {
             const request = store.put(updatedRecord)
             request.onsuccess = () => resolve(updatedRecord)
@@ -181,7 +185,7 @@ export abstract class BaseQueryBuilder<
     return new Promise((resolve, reject) => {
       // Merge with existing record to preserve unspecified fields
       const existingRecord = records.find(r => r.id === data.id)
-      const updatedRecord = { ...existingRecord, ...data }
+      const updatedRecord = this.deepClone({ ...existingRecord, ...data })
       const request = store.put(updatedRecord)
       request.onsuccess = () => resolve([updatedRecord])
       request.onerror = () => reject(request.error)
@@ -189,7 +193,7 @@ export abstract class BaseQueryBuilder<
   }
 
   private async handleUpsert(store: IDBObjectStore, data: any): Promise<any[]> {
-    const record = { ...data }
+    const record = this.deepClone({ ...data })
     this.ensurePrimaryKey(record)
     this.applyDefaults(record)
 
