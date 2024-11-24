@@ -1,5 +1,6 @@
-import type { DatabaseResults, DatabaseSchema } from './types'
+import type { DatabaseResults, DatabaseSchema, PrimitiveFieldSchema } from './types'
 import { QueryBuilder } from './builders/query'
+import { isPrimaryKeyField } from './utils'
 
 export class IdbOrm<TSchema extends DatabaseSchema> {
   public dbName: string
@@ -35,7 +36,7 @@ export class IdbOrm<TSchema extends DatabaseSchema> {
         Object.entries(this.schema).forEach(([tableName, tableSchema]) => {
           if (!db.objectStoreNames.contains(tableName)) {
             const pkField = Object.entries(tableSchema).find(
-              ([_, field]) => field.primaryKey,
+              ([_, field]) => isPrimaryKeyField(field) && field.primaryKey,
             )
 
             if (!pkField)
@@ -44,7 +45,7 @@ export class IdbOrm<TSchema extends DatabaseSchema> {
             const [keyPath, field] = pkField
             db.createObjectStore(tableName, {
               keyPath,
-              autoIncrement: field.autoIncrement ?? false,
+              autoIncrement: (field as PrimitiveFieldSchema<any>).autoIncrement ?? false,
             })
           }
         })

@@ -1,5 +1,5 @@
 import type { DatabaseSchema, Operation } from '../types'
-import { selectFields, uuid } from '../utils'
+import { isPrimaryKeyField, selectFields, uuid } from '../utils'
 
 export abstract class BaseQueryBuilder<
   TSchema extends DatabaseSchema,
@@ -105,7 +105,7 @@ export abstract class BaseQueryBuilder<
 
   private ensurePrimaryKey(data: any): void {
     const pkField = Object.entries(this.tableSchema).find(
-      ([_, field]) => field.primaryKey,
+      ([_, field]) => isPrimaryKeyField(field) && field.primaryKey,
     )
 
     if (pkField) {

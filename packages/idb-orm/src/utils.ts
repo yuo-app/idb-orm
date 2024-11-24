@@ -1,3 +1,9 @@
+import type { PrimitiveFieldSchema } from './types'
+
+export function isPrimaryKeyField(field: any): field is PrimitiveFieldSchema<any> {
+  return 'primaryKey' in field
+}
+
 export function selectFields<T extends object, K extends keyof T>(
   obj: T,
   fields: K[],

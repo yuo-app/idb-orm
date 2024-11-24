@@ -8,13 +8,22 @@ const schema = {
     name: { type: 'string', required: true },
     email: { type: 'string' },
     age: { type: 'number', required: true },
-    meta: { type: 'object' },
+    meta: {
+      type: 'object',
+      props: {
+        bio: { type: 'string' },
+        role: { type: 'string' },
+      },
+    },
   },
   posts: {
     id: { type: 'number', primaryKey: true, autoIncrement: true },
     title: { type: 'string', required: true },
     published: { type: 'boolean', default: false },
-    tags: { type: 'array' },
+    tags: {
+      type: 'array',
+      items: { type: 'string' },
+    },
   },
 } satisfies DatabaseSchema
 
@@ -124,14 +133,23 @@ const extendedSchema = {
     email: { type: 'string', default: 'example@example.com' },
     age: { type: 'number' },
     isActive: { type: 'boolean', default: true },
-    profile: { type: 'object' },
+    profile: {
+      type: 'object',
+      props: {
+        bio: { type: 'string' },
+        role: { type: 'string' },
+      },
+    },
   },
   articles: {
     id: { type: 'number', primaryKey: true, autoIncrement: true },
     title: { type: 'string', required: true },
     content: { type: 'string' },
     publishedAt: { type: 'number', default: Date.now() },
-    tags: { type: 'array' },
+    tags: {
+      type: 'array',
+      items: { type: 'string' },
+    },
   },
 } satisfies DatabaseSchema
 

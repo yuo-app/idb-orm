@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from 'vitest'
-import { type Database, type DatabaseSchema, IdbOrm } from '../src'
+import { type Database, type DatabaseSchema, IdbOrm, type Insert } from '../src'
 
 const advancedSchema = {
   products: {
@@ -8,8 +8,22 @@ const advancedSchema = {
     price: { type: 'number', required: true },
     category: { type: 'string', required: true },
     inStock: { type: 'boolean', default: false },
-    tags: { type: 'array', default: [] },
-    metadata: { type: 'object', default: {} },
+    tags: {
+      type: 'array',
+      items: { type: 'string' },
+      default: [],
+    },
+    metadata: {
+      type: 'object',
+      props: {
+        edition: { type: 'string' },
+        serialNumber: { type: 'string' },
+        test: { type: 'boolean' },
+      },
+      default: {
+        test: true,
+      },
+    },
   },
   orders: {
     id: { type: 'number', primaryKey: true, autoIncrement: true },
@@ -36,6 +50,12 @@ const advancedSchema = {
 
 type DB = Database<typeof advancedSchema>
 type Product = DB['products']
+type ProductInsert = Insert<typeof advancedSchema['products']>
+
+const test: ProductInsert = {
+  metadata: {
+  },
+}
 type Order = DB['orders']
 type OrderItem = DB['orderItems']
 type Customer = DB['customers']
