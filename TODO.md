@@ -9,6 +9,7 @@
 - [x] in schema when something is not required but has a default value, it should not be an optional type
 - [x] default values should work
 
+- [ ] simplify classes, do we really need 4?
 - [ ] batch delete + other batch
 - [ ] add date type
 - [ ] count records
